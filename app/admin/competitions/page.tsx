@@ -2,7 +2,7 @@
 
 import { useState, useEffect, FormEvent } from 'react';
 import { supabase } from '@/lib/supabaseClient';
-import { Trophy, PlusCircle, Trash2 } from 'lucide-react';
+import { Trophy, PlusCircle, Trash2, CheckSquare, XSquare } from 'lucide-react';
 
 // Define the type for a competition object
 type Competition = {
@@ -11,6 +11,7 @@ type Competition = {
   description: string | null;
   lock_date: string;
   created_at: string;
+  allow_draws: boolean; // Added new field
 };
 
 export default function CompetitionsPage() {
@@ -18,6 +19,7 @@ export default function CompetitionsPage() {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [lockDate, setLockDate] = useState('');
+  const [allowDraws, setAllowDraws] = useState(true); // Default to true for new competitions
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -50,14 +52,16 @@ export default function CompetitionsPage() {
 
     const { error } = await supabase
       .from('competitions')
-      .insert([{ name, description, lock_date: lockDate }]);
+      .insert([{ name, description, lock_date: lockDate, allow_draws: allowDraws }]); // Include allow_draws in insert
 
     if (error) {
       setError(error.message);
     } else {
+      // Reset form fields
       setName('');
       setDescription('');
       setLockDate('');
+      setAllowDraws(true);
       setError(null);
       await fetchCompetitions(); // Refresh the list
     }
@@ -120,6 +124,19 @@ export default function CompetitionsPage() {
               className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-800 border-gray-300 dark:border-gray-700"
             />
           </div>
+          {/* Allow Draws Checkbox */}
+          <div className="flex items-center">
+            <input
+              id="allowDraws"
+              type="checkbox"
+              checked={allowDraws}
+              onChange={(e) => setAllowDraws(e.target.checked)}
+              className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+            />
+            <label htmlFor="allowDraws" className="ml-2 block text-sm">
+              Allow "Draw" as a prediction option
+            </label>
+          </div>
           {error && <p className="text-red-500 text-sm">{error}</p>}
           <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-semibold">
             Add Competition
@@ -141,6 +158,10 @@ export default function CompetitionsPage() {
                   <p className="text-sm text-gray-500 dark:text-gray-400">
                     Locks on: {new Date(comp.lock_date).toLocaleString()}
                   </p>
+                  <div className={`flex items-center text-xs font-medium mt-1 ${comp.allow_draws ? 'text-green-600' : 'text-red-600'}`}>
+                    {comp.allow_draws ? <CheckSquare className="w-4 h-4 mr-1.5" /> : <XSquare className="w-4 h-4 mr-1.5" />}
+                    Draws are {comp.allow_draws ? 'Allowed' : 'Not Allowed'}
+                  </div>
                 </div>
                 <button 
                   onClick={() => handleDeleteCompetition(comp.id)}

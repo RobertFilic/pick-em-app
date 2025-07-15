@@ -11,6 +11,7 @@ type Competition = {
   name: string;
   description: string | null;
   lock_date: string;
+  allow_draws: boolean; // This setting controls the draw option
 };
 
 type Team = {
@@ -23,17 +24,16 @@ type Game = {
   id: number;
   game_date: string;
   stage: string | null;
-  group: string | null; // Added to store group info
+  group: string | null;
   team_a: Team | null;
   team_b: Team | null;
 };
 
 type Pick = {
   game_id: number;
-  pick: string; // Will store team_id or 'draw'
+  pick: string;
 };
 
-// The props for this page component will include the dynamic `id`
 type PageProps = {
   params: { id: string };
 };
@@ -57,7 +57,6 @@ export default function CompetitionPage({ params }: PageProps) {
     setError(null);
 
     try {
-      // Fetch competition details, games, groupings, and user's existing picks in parallel
       const [competitionRes, gamesRes, groupingsRes, picksRes] = await Promise.all([
         supabase.from('competitions').select('*').eq('id', competitionId).single(),
         supabase.from('games').select('*, team_a:teams!games_team_a_id_fkey(*), team_b:teams!games_team_b_id_fkey(*)').eq('competition_id', competitionId).order('game_date', { ascending: true }),
@@ -71,13 +70,11 @@ export default function CompetitionPage({ params }: PageProps) {
       if (gamesRes.error) throw gamesRes.error;
       if (groupingsRes.error) throw groupingsRes.error;
 
-      // Create a map of team IDs to their group name
       const groupMap = groupingsRes.data.reduce((acc, item) => {
           acc[item.team_id] = item.group;
           return acc;
       }, {} as { [key: number]: string });
 
-      // Add the group information to each game object
       const gamesWithGroups = gamesRes.data.map(game => ({
           ...game,
           group: game.team_a ? groupMap[game.team_a.id] : null
@@ -182,7 +179,6 @@ export default function CompetitionPage({ params }: PageProps) {
         </div>
         <p className="text-gray-600 dark:text-gray-400 sm:ml-12">{competition.description}</p>
         
-        {/* Added Note Section */}
         <div className="mt-4 sm:ml-12 p-4 bg-blue-50 dark:bg-blue-900/30 border-l-4 border-blue-500 rounded-r-lg flex items-start">
             <Info className="w-5 h-5 mr-3 mt-1 text-blue-500 flex-shrink-0" />
             <div>
@@ -205,7 +201,8 @@ export default function CompetitionPage({ params }: PageProps) {
                 {isGameLocked(game.game_date) && <span className="ml-2 text-xs font-bold text-red-500">(LOCKED)</span>}
               </div>
             </div>
-            <div className="grid grid-cols-3 gap-2 items-center">
+            {/* UPDATED: Grid layout now correctly respects the allow_draws setting */}
+            <div className={`grid ${competition.allow_draws === true ? 'grid-cols-3' : 'grid-cols-2'} gap-2 items-center`}>
               <button 
                 disabled={isGameLocked(game.game_date)}
                 onClick={() => handlePickChange(game.id, game.team_a!.id.toString())}
@@ -214,13 +211,18 @@ export default function CompetitionPage({ params }: PageProps) {
                 <img src={game.team_a?.logo_url || `https://placehold.co/40x40/E2E8F0/4A5568?text=${game.team_a?.name.charAt(0)}`} alt="" className="w-10 h-10 rounded-full mb-2"/>
                 <span className="font-semibold text-center">{game.team_a?.name}</span>
               </button>
-              <button 
-                disabled={isGameLocked(game.game_date)}
-                onClick={() => handlePickChange(game.id, 'draw')}
-                className={`flex flex-col items-center justify-center p-3 rounded-md border-2 h-full transition-all ${picks[game.id] === 'draw' ? 'bg-blue-600 text-white border-blue-600' : 'bg-gray-50 dark:bg-gray-800 hover:border-blue-500'}`}
-              >
-                <span className="font-bold text-lg">DRAW</span>
-              </button>
+              
+              {/* UPDATED: Conditional rendering now uses an explicit boolean check */}
+              {competition.allow_draws === true && (
+                <button 
+                  disabled={isGameLocked(game.game_date)}
+                  onClick={() => handlePickChange(game.id, 'draw')}
+                  className={`flex flex-col items-center justify-center p-3 rounded-md border-2 h-full transition-all ${picks[game.id] === 'draw' ? 'bg-blue-600 text-white border-blue-600' : 'bg-gray-50 dark:bg-gray-800 hover:border-blue-500'}`}
+                >
+                  <span className="font-bold text-lg">DRAW</span>
+                </button>
+              )}
+
               <button 
                 disabled={isGameLocked(game.game_date)}
                 onClick={() => handlePickChange(game.id, game.team_b!.id.toString())}
