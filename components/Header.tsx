@@ -1,4 +1,4 @@
-'use client'; // This is a Client Component, as it uses hooks for state and effects.
+'use client';
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
@@ -10,51 +10,57 @@ import { LogOut, Shield } from 'lucide-react';
 export default function Header() {
   const [user, setUser] = useState<User | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [loading, setLoading] = useState(true); // Add a loading state
+  const [loading, setLoading] = useState(true);
   const router = useRouter();
 
+  // This effect runs once on mount to set up the authentication listener
   useEffect(() => {
-    const getSessionAndProfile = async () => {
+    // Immediately get the current session to set the initial state
+    const setInitialSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       setUser(session?.user ?? null);
-
-      if (session?.user) {
-        // Check if the user is an admin by fetching their profile
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('is_admin')
-          .eq('id', session.user.id)
-          .single();
-        
-        if (profile) {
-          setIsAdmin(profile.is_admin);
-        }
-      }
       setLoading(false);
     };
+    
+    setInitialSession();
 
-    getSessionAndProfile();
-
-    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+    // Listen for changes in authentication state (sign in, sign out)
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
-      if (event === 'SIGNED_OUT') {
-        setIsAdmin(false);
-        router.push('/login');
-      } else if (event === 'SIGNED_IN') {
-        // When user signs in, refresh the page to reflect the new state everywhere
-        router.refresh();
-      }
+      setLoading(false);
     });
 
-    // Cleanup function to unsubscribe from the listener
     return () => {
       authListener.subscription.unsubscribe();
     };
-  }, [router]);
+  }, []);
+
+  // This second effect runs whenever the `user` state changes.
+  // This is the key to the fix: when a user logs in, this will run
+  // and check their admin status immediately.
+  useEffect(() => {
+    if (user) {
+      // If there is a user, fetch their profile to check for admin role
+      const fetchProfile = async () => {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('is_admin')
+          .eq('id', user.id)
+          .single();
+        
+        setIsAdmin(profile?.is_admin || false);
+      };
+      fetchProfile();
+    } else {
+      // If there is no user, ensure admin status is false
+      setIsAdmin(false);
+    }
+  }, [user]); // Dependency array ensures this runs when `user` changes
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    // The onAuthStateChange listener will handle the redirect and state updates
+    // The auth listener will handle setting user to null, and we can redirect
+    router.push('/login');
   };
 
   return (

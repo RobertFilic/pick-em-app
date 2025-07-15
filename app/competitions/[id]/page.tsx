@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
-import { Trophy, Clock, CheckCircle } from 'lucide-react';
+import { Trophy, Clock, CheckCircle, BarChart2 } from 'lucide-react';
 import Link from 'next/link';
 
 // Define the types for our data
@@ -23,6 +23,7 @@ type Game = {
   id: number;
   game_date: string;
   stage: string | null;
+  group: string | null; // Added to store group info
   team_a: Team | null;
   team_b: Team | null;
 };
@@ -51,27 +52,39 @@ export default function CompetitionPage({ params }: PageProps) {
 
   const isGameLocked = (gameDate: string) => new Date(gameDate) < new Date();
 
-  // Using useCallback to memoize the fetch function
   const fetchAllData = useCallback(async (currentUserId: string) => {
     setLoading(true);
     setError(null);
 
     try {
-      // Fetch competition details, games, and user's existing picks in parallel
-      const [competitionRes, gamesRes, picksRes] = await Promise.all([
+      // Fetch competition details, games, groupings, and user's existing picks in parallel
+      const [competitionRes, gamesRes, groupingsRes, picksRes] = await Promise.all([
         supabase.from('competitions').select('*').eq('id', competitionId).single(),
         supabase.from('games').select('*, team_a:teams!games_team_a_id_fkey(*), team_b:teams!games_team_b_id_fkey(*)').eq('competition_id', competitionId).order('game_date', { ascending: true }),
+        supabase.from('competition_teams').select('team_id, group').eq('competition_id', competitionId),
         supabase.from('user_picks').select('game_id, pick').eq('user_id', currentUserId).eq('competition_id', competitionId)
       ]);
 
       if (competitionRes.error) throw competitionRes.error;
       setCompetition(competitionRes.data);
-
+      
       if (gamesRes.error) throw gamesRes.error;
-      setGames(gamesRes.data as Game[]);
+      if (groupingsRes.error) throw groupingsRes.error;
+
+      // Create a map of team IDs to their group name
+      const groupMap = groupingsRes.data.reduce((acc, item) => {
+          acc[item.team_id] = item.group;
+          return acc;
+      }, {} as { [key: number]: string });
+
+      // Add the group information to each game object
+      const gamesWithGroups = gamesRes.data.map(game => ({
+          ...game,
+          group: game.team_a ? groupMap[game.team_a.id] : null
+      }));
+      setGames(gamesWithGroups as Game[]);
 
       if (picksRes.error) throw picksRes.error;
-      // Format existing picks into a more accessible object structure
       const existingPicks = picksRes.data.reduce((acc, pick) => {
         acc[pick.game_id] = pick.pick;
         return acc;
@@ -93,7 +106,6 @@ export default function CompetitionPage({ params }: PageProps) {
         setUserId(user.id);
         fetchAllData(user.id);
       } else {
-        // Handle case where user is not logged in, maybe redirect
         setLoading(false);
         setError("You must be logged in to view this page.");
       }
@@ -128,14 +140,14 @@ export default function CompetitionPage({ params }: PageProps) {
     }
 
     const { error: upsertError } = await supabase.from('user_picks').upsert(picksToUpsert, {
-      onConflict: 'user_id, game_id', // This is crucial for updating existing picks
+      onConflict: 'user_id, game_id',
     });
 
     if (upsertError) {
       setError(upsertError.message);
     } else {
       setSuccess("Your picks have been saved successfully!");
-      setTimeout(() => setSuccess(null), 3000); // Hide success message after 3s
+      setTimeout(() => setSuccess(null), 3000);
     }
     setSubmitting(false);
   };
@@ -155,18 +167,29 @@ export default function CompetitionPage({ params }: PageProps) {
   return (
     <div>
       <div className="bg-white dark:bg-gray-900 p-6 rounded-lg border border-gray-200 dark:border-gray-800 mb-8">
-        <div className="flex items-center mb-2">
-          <Trophy className="w-8 h-8 mr-4 text-blue-500" />
-          <h1 className="text-4xl font-bold">{competition.name}</h1>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-2">
+            <div className="flex items-center">
+              <Trophy className="w-8 h-8 mr-4 text-blue-500" />
+              <h1 className="text-4xl font-bold">{competition.name}</h1>
+            </div>
+            <Link 
+              href={`/competitions/${competitionId}/leaderboard`}
+              className="mt-4 sm:mt-0 inline-flex items-center justify-center px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600 font-semibold transition-colors"
+            >
+                <BarChart2 className="w-5 h-5 mr-2" />
+                View Leaderboard
+            </Link>
         </div>
-        <p className="text-gray-600 dark:text-gray-400 ml-12">{competition.description}</p>
+        <p className="text-gray-600 dark:text-gray-400 sm:ml-12">{competition.description}</p>
       </div>
 
       <div className="space-y-6">
         {games.map(game => (
           <div key={game.id} className={`bg-white dark:bg-gray-900 p-4 rounded-lg border border-gray-200 dark:border-gray-800 ${isGameLocked(game.game_date) ? 'opacity-60' : ''}`}>
             <div className="flex justify-between items-center mb-3">
-              <p className="text-sm font-semibold text-gray-500 dark:text-gray-400">{game.stage || 'Game'}</p>
+              <p className="text-sm font-semibold text-gray-500 dark:text-gray-400">
+                {game.stage} {game.group ? `- ${game.group}` : ''}
+              </p>
               <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
                 <Clock className="w-4 h-4 mr-1.5"/>
                 {new Date(game.game_date).toLocaleString()}
@@ -174,7 +197,6 @@ export default function CompetitionPage({ params }: PageProps) {
               </div>
             </div>
             <div className="grid grid-cols-3 gap-2 items-center">
-              {/* Team A */}
               <button 
                 disabled={isGameLocked(game.game_date)}
                 onClick={() => handlePickChange(game.id, game.team_a!.id.toString())}
@@ -183,7 +205,6 @@ export default function CompetitionPage({ params }: PageProps) {
                 <img src={game.team_a?.logo_url || `https://placehold.co/40x40/E2E8F0/4A5568?text=${game.team_a?.name.charAt(0)}`} alt="" className="w-10 h-10 rounded-full mb-2"/>
                 <span className="font-semibold text-center">{game.team_a?.name}</span>
               </button>
-              {/* Draw */}
               <button 
                 disabled={isGameLocked(game.game_date)}
                 onClick={() => handlePickChange(game.id, 'draw')}
@@ -191,7 +212,6 @@ export default function CompetitionPage({ params }: PageProps) {
               >
                 <span className="font-bold text-lg">DRAW</span>
               </button>
-              {/* Team B */}
               <button 
                 disabled={isGameLocked(game.game_date)}
                 onClick={() => handlePickChange(game.id, game.team_b!.id.toString())}
