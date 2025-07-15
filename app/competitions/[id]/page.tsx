@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
-import { Trophy, Clock, CheckCircle, BarChart2 } from 'lucide-react';
+import { Trophy, Clock, CheckCircle, BarChart2, Info } from 'lucide-react';
 import Link from 'next/link';
 
 // Define the types for our data
@@ -181,6 +181,15 @@ export default function CompetitionPage({ params }: PageProps) {
             </Link>
         </div>
         <p className="text-gray-600 dark:text-gray-400 sm:ml-12">{competition.description}</p>
+        
+        {/* Added Note Section */}
+        <div className="mt-4 sm:ml-12 p-4 bg-blue-50 dark:bg-blue-900/30 border-l-4 border-blue-500 rounded-r-lg flex items-start">
+            <Info className="w-5 h-5 mr-3 mt-1 text-blue-500 flex-shrink-0" />
+            <div>
+                <h4 className="font-bold text-blue-800 dark:text-blue-300">A Note on Predictions</h4>
+                <p className="text-sm text-blue-700 dark:text-blue-400 mt-1">You can change your picks for any game as many times as you like until the scheduled start time of that specific game. Once a game begins, its prediction is locked permanently.</p>
+            </div>
+        </div>
       </div>
 
       <div className="space-y-6">
