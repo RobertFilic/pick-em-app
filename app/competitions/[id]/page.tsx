@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
-import { Trophy, Clock, CheckCircle, BarChart2, Info } from 'lucide-react';
+import { Trophy, Clock, CheckCircle, BarChart2, Info, Calendar } from 'lucide-react';
 import Link from 'next/link';
 
 // Define the types for our data
@@ -40,7 +40,7 @@ type PageProps = {
 
 export default function CompetitionPage({ params }: PageProps) {
   const [competition, setCompetition] = useState<Competition | null>(null);
-  const [games, setGames] = useState<Game[]>([]);
+  const [groupedGames, setGroupedGames] = useState<{ [key: string]: Game[] }>({});
   const [picks, setPicks] = useState<{ [key: number]: string }>({});
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -78,8 +78,20 @@ export default function CompetitionPage({ params }: PageProps) {
       const gamesWithGroups = gamesRes.data.map(game => ({
           ...game,
           group: game.team_a ? groupMap[game.team_a.id] : null
-      }));
-      setGames(gamesWithGroups as Game[]);
+      })) as Game[];
+
+      // Group games by date
+      const gamesByDate = gamesWithGroups.reduce((acc, game) => {
+        const date = new Date(game.game_date).toLocaleDateString(undefined, {
+            weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+        });
+        if (!acc[date]) {
+            acc[date] = [];
+        }
+        acc[date].push(game);
+        return acc;
+      }, {} as { [key: string]: Game[] });
+      setGroupedGames(gamesByDate);
 
       if (picksRes.error) throw picksRes.error;
       const existingPicks = picksRes.data.reduce((acc, pick) => {
@@ -188,49 +200,57 @@ export default function CompetitionPage({ params }: PageProps) {
         </div>
       </div>
 
-      <div className="space-y-6">
-        {games.map(game => (
-          <div key={game.id} className={`bg-white dark:bg-gray-900 p-4 rounded-lg border border-gray-200 dark:border-gray-800 ${isGameLocked(game.game_date) ? 'opacity-60' : ''}`}>
-            <div className="flex justify-between items-center mb-3">
-              <p className="text-sm font-semibold text-gray-500 dark:text-gray-400">
-                {game.stage} {game.group ? `- ${game.group}` : ''}
-              </p>
-              <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
-                <Clock className="w-4 h-4 mr-1.5"/>
-                {new Date(game.game_date).toLocaleString()}
-                {isGameLocked(game.game_date) && <span className="ml-2 text-xs font-bold text-red-500">(LOCKED)</span>}
-              </div>
-            </div>
-            {/* UPDATED: Grid layout now correctly respects the allow_draws setting */}
-            <div className={`grid ${competition.allow_draws === true ? 'grid-cols-3' : 'grid-cols-2'} gap-2 items-center`}>
-              <button 
-                disabled={isGameLocked(game.game_date)}
-                onClick={() => handlePickChange(game.id, game.team_a!.id.toString())}
-                className={`flex flex-col items-center justify-center p-3 rounded-md border-2 transition-all ${picks[game.id] === game.team_a!.id.toString() ? 'bg-blue-600 text-white border-blue-600' : 'bg-gray-50 dark:bg-gray-800 hover:border-blue-500'}`}
-              >
-                <img src={game.team_a?.logo_url || `https://placehold.co/40x40/E2E8F0/4A5568?text=${game.team_a?.name.charAt(0)}`} alt="" className="w-10 h-10 rounded-full mb-2"/>
-                <span className="font-semibold text-center">{game.team_a?.name}</span>
-              </button>
-              
-              {/* UPDATED: Conditional rendering now uses an explicit boolean check */}
-              {competition.allow_draws === true && (
-                <button 
-                  disabled={isGameLocked(game.game_date)}
-                  onClick={() => handlePickChange(game.id, 'draw')}
-                  className={`flex flex-col items-center justify-center p-3 rounded-md border-2 h-full transition-all ${picks[game.id] === 'draw' ? 'bg-blue-600 text-white border-blue-600' : 'bg-gray-50 dark:bg-gray-800 hover:border-blue-500'}`}
-                >
-                  <span className="font-bold text-lg">DRAW</span>
-                </button>
-              )}
+      <div className="space-y-8">
+        {Object.entries(groupedGames).map(([date, gamesOnDate]) => (
+          <div key={date}>
+            <h2 className="text-xl font-bold mb-4 flex items-center text-gray-700 dark:text-gray-300">
+                <Calendar className="w-6 h-6 mr-3" />
+                {date}
+            </h2>
+            <div className="space-y-6">
+              {gamesOnDate.map(game => (
+                <div key={game.id} className={`bg-white dark:bg-gray-900 p-4 rounded-lg border border-gray-200 dark:border-gray-800 ${isGameLocked(game.game_date) ? 'opacity-60' : ''}`}>
+                  <div className="flex justify-between items-center mb-3">
+                    <p className="text-sm font-semibold text-gray-500 dark:text-gray-400">
+                      {game.stage} {game.group ? `- ${game.group}` : ''}
+                    </p>
+                    <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
+                      <Clock className="w-4 h-4 mr-1.5"/>
+                      {new Date(game.game_date).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}
+                      {isGameLocked(game.game_date) && <span className="ml-2 text-xs font-bold text-red-500">(LOCKED)</span>}
+                    </div>
+                  </div>
+                  <div className={`grid ${competition.allow_draws === true ? 'grid-cols-3' : 'grid-cols-2'} gap-2 items-center`}>
+                    <button 
+                      disabled={isGameLocked(game.game_date)}
+                      onClick={() => handlePickChange(game.id, game.team_a!.id.toString())}
+                      className={`flex flex-col items-center justify-center p-3 rounded-md border-2 transition-all ${picks[game.id] === game.team_a!.id.toString() ? 'bg-blue-600 text-white border-blue-600' : 'bg-gray-50 dark:bg-gray-800 hover:border-blue-500'}`}
+                    >
+                      <img src={game.team_a?.logo_url || `https://placehold.co/40x40/E2E8F0/4A5568?text=${game.team_a?.name.charAt(0)}`} alt="" className="w-10 h-10 rounded-full mb-2"/>
+                      <span className="font-semibold text-center">{game.team_a?.name}</span>
+                    </button>
+                    
+                    {competition.allow_draws === true && (
+                      <button 
+                        disabled={isGameLocked(game.game_date)}
+                        onClick={() => handlePickChange(game.id, 'draw')}
+                        className={`flex flex-col items-center justify-center p-3 rounded-md border-2 h-full transition-all ${picks[game.id] === 'draw' ? 'bg-blue-600 text-white border-blue-600' : 'bg-gray-50 dark:bg-gray-800 hover:border-blue-500'}`}
+                      >
+                        <span className="font-bold text-lg">DRAW</span>
+                      </button>
+                    )}
 
-              <button 
-                disabled={isGameLocked(game.game_date)}
-                onClick={() => handlePickChange(game.id, game.team_b!.id.toString())}
-                className={`flex flex-col items-center justify-center p-3 rounded-md border-2 transition-all ${picks[game.id] === game.team_b!.id.toString() ? 'bg-blue-600 text-white border-blue-600' : 'bg-gray-50 dark:bg-gray-800 hover:border-blue-500'}`}
-              >
-                <img src={game.team_b?.logo_url || `https://placehold.co/40x40/E2E8F0/4A5568?text=${game.team_b?.name.charAt(0)}`} alt="" className="w-10 h-10 rounded-full mb-2"/>
-                <span className="font-semibold text-center">{game.team_b?.name}</span>
-              </button>
+                    <button 
+                      disabled={isGameLocked(game.game_date)}
+                      onClick={() => handlePickChange(game.id, game.team_b!.id.toString())}
+                      className={`flex flex-col items-center justify-center p-3 rounded-md border-2 transition-all ${picks[game.id] === game.team_b!.id.toString() ? 'bg-blue-600 text-white border-blue-600' : 'bg-gray-50 dark:bg-gray-800 hover:border-blue-500'}`}
+                    >
+                      <img src={game.team_b?.logo_url || `https://placehold.co/40x40/E2E8F0/4A5568?text=${game.team_b?.name.charAt(0)}`} alt="" className="w-10 h-10 rounded-full mb-2"/>
+                      <span className="font-semibold text-center">{game.team_b?.name}</span>
+                    </button>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         ))}
