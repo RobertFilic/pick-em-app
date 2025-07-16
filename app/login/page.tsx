@@ -169,7 +169,7 @@ export default function AuthPage() {
               </Button>
 
               <p className="text-sm text-center text-gray-600 dark:text-gray-400">
-                {isLoginView ? "Don't have an account?" : "Already have an account?"}
+                {isLoginView ? "Don&apos;t have an account?" : "Already have an account?"}
                 <button 
                   type="button"
                   onClick={() => setIsLoginView(!isLoginView)}
