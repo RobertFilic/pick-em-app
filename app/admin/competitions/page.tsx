@@ -68,6 +68,7 @@ export default function CompetitionsPage() {
   };
   
   const handleDeleteCompetition = async (id: number) => {
+    // FIXED: Changed double quotes to single quotes to fix ESLint error
     if (window.confirm('Are you sure you want to delete this competition? This will delete all associated games and picks.')) {
         const { error } = await supabase.from('competitions').delete().eq('id', id);
         if (error) {
@@ -134,7 +135,7 @@ export default function CompetitionsPage() {
               className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
             />
             <label htmlFor="allowDraws" className="ml-2 block text-sm">
-              Allow "Draw" as a prediction option
+              Allow &quot;Draw&quot; as a prediction option
             </label>
           </div>
           {error && <p className="text-red-500 text-sm">{error}</p>}

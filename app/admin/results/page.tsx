@@ -89,7 +89,8 @@ export default function ResultsPage() {
     setSuccess(null);
     setError(null);
 
-    let updateData: { winning_team_id: number | null; is_draw: boolean } = {
+    // FIXED: Changed 'let' to 'const' and initialized object properties
+    const updateData: { winning_team_id: number | null; is_draw: boolean } = {
         winning_team_id: null,
         is_draw: false
     };

@@ -62,8 +62,13 @@ export default function LeaderboardPage({ params }: PageProps) {
         setCurrentUserStats(userStats || null);
       }
 
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err) { // FIXED: Changed from 'err: any' to 'err'
+      // Type guard to ensure err is an Error object
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError("An unknown error occurred");
+      }
       console.error("Error fetching leaderboard:", err);
     } finally {
       setLoading(false);

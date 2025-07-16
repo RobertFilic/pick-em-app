@@ -1,8 +1,8 @@
-'use client'; // This directive is essential for components with hooks and event listeners.
+'use client';
 
 import React, { useState } from 'react';
-import { useRouter } from 'next/navigation'; // Use the Next.js router for navigation
-import { supabase } from '@/lib/supabaseClient'; // Import your actual Supabase client using the path alias
+import { useRouter } from 'next/navigation';
+import { supabase } from '@/lib/supabaseClient';
 import { Mail, Lock, User, LogIn } from 'lucide-react';
 
 // --- Reusable UI Components (Minimalist & Clean) ---
@@ -13,7 +13,7 @@ const Card = ({ children, className = '' }: { children: React.ReactNode; classNa
   </div>
 );
 
-const CardHeader = ({ children, className = '' }: { children: React.ReactNode; className?: string }) => <div className={`p-6 ${className}`}>{children}</div>;
+// FIXED: Removed unused CardHeader component
 const CardContent = ({ children, className = '' }: { children: React.ReactNode; className?: string }) => <div className={`p-6 pt-0 ${className}`}>{children}</div>;
 const CardFooter = ({ children, className = '' }: { children: React.ReactNode; className?: string }) => <div className={`flex items-center p-6 pt-0 ${className}`}>{children}</div>;
 
@@ -32,7 +32,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(({ id, type, placeh
       ref={ref}
       placeholder={placeholder}
       className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-700 rounded-md bg-gray-50 dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
-      required
+      required={type !== 'password' && type !== 'email'}
       {...props}
     />
   </div>
@@ -96,8 +96,12 @@ export default function AuthPage() {
         if (signUpError) throw signUpError;
         setSuccessMessage('Sign up successful! Please check your email to verify your account.');
       }
-    } catch (err: any) {
-      setError(err.message || 'An unexpected error occurred.');
+    } catch (err) { // FIXED: Changed from 'err: any' to 'err'
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError('An unexpected error occurred.');
+      }
     } finally {
       setLoading(false);
     }
