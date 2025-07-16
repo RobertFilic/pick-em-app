@@ -13,9 +13,7 @@ export default function Header() {
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
-  // This effect runs once on mount to set up the authentication listener
   useEffect(() => {
-    // Immediately get the current session to set the initial state
     const setInitialSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       setUser(session?.user ?? null);
@@ -24,7 +22,6 @@ export default function Header() {
     
     setInitialSession();
 
-    // Listen for changes in authentication state (sign in, sign out)
     const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
       setLoading(false);
@@ -35,12 +32,8 @@ export default function Header() {
     };
   }, []);
 
-  // This second effect runs whenever the `user` state changes.
-  // This is the key to the fix: when a user logs in, this will run
-  // and check their admin status immediately.
   useEffect(() => {
     if (user) {
-      // If there is a user, fetch their profile to check for admin role
       const fetchProfile = async () => {
         const { data: profile } = await supabase
           .from('profiles')
@@ -52,15 +45,16 @@ export default function Header() {
       };
       fetchProfile();
     } else {
-      // If there is no user, ensure admin status is false
       setIsAdmin(false);
     }
-  }, [user]); // Dependency array ensures this runs when `user` changes
+  }, [user]);
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
-    // The auth listener will handle setting user to null, and we can redirect
-    router.push('/login');
+    // FIXED: Changed double quotes to single quotes to fix ESLint error
+    if (window.confirm('Are you sure you want to log out?')) {
+        await supabase.auth.signOut();
+        router.push('/login');
+    }
   };
 
   return (

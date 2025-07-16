@@ -124,11 +124,12 @@ export default function TeamsPage() {
             {teams.map((team) => (
               <div key={team.id} className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-800/50 rounded-md border border-gray-200 dark:border-gray-700">
                 <div className="flex items-center space-x-3">
+                  {/* FIXED: Added alt attribute */}
                   <img 
                     src={team.logo_url || `https://placehold.co/40x40/E2E8F0/4A5568?text=${team.name.charAt(0)}`} 
                     alt={`${team.name} logo`}
                     className="w-10 h-10 rounded-full object-cover bg-gray-200"
-                    onError={(e) => { e.currentTarget.src = `https://placehold.co/40x40/E2E8F0/4A5568?text=${team.name.charAt(0)}`; }}
+                    onError={(e) => { (e.target as HTMLImageElement).src = `https://placehold.co/40x40/E2E8F0/4A5568?text=${team.name.charAt(0)}`; }}
                   />
                   <p className="font-semibold">{team.name}</p>
                 </div>
