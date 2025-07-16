@@ -1,7 +1,3 @@
-// File: app/login/page.tsx
-// This is the complete, production-ready code for your authentication page.
-// It uses hooks from Next.js and connects to your actual Supabase client.
-
 'use client'; // This directive is essential for components with hooks and event listeners.
 
 import React, { useState } from 'react';
@@ -78,7 +74,7 @@ export default function AuthPage() {
   const [successMessage, setSuccessMessage] = useState('');
   const router = useRouter();
 
-  const handleAuthAction = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleEmailAuth = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
     setError('');
@@ -86,29 +82,16 @@ export default function AuthPage() {
 
     try {
       if (isLoginView) {
-        // --- Handle Login ---
-        const { error: signInError } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
+        const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
         if (signInError) throw signInError;
         setSuccessMessage('Login successful! Redirecting...');
-        // Redirect to the homepage/dashboard after a short delay
         setTimeout(() => router.push('/'), 1000);
-
       } else {
-        // --- Handle Sign Up ---
-        if (!username.trim()) {
-            throw new Error('Username is required.');
-        }
+        if (!username.trim()) throw new Error('Username is required.');
         const { error: signUpError } = await supabase.auth.signUp({
           email,
           password,
-          options: {
-            // This 'data' object is passed to the 'handle_new_user' function
-            // you created in the Supabase SQL script.
-            data: { username: username.trim() },
-          },
+          options: { data: { username: username.trim() } },
         });
         if (signUpError) throw signUpError;
         setSuccessMessage('Sign up successful! Please check your email to verify your account.');
@@ -117,6 +100,16 @@ export default function AuthPage() {
       setError(err.message || 'An unexpected error occurred.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    setError('');
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+    });
+    if (error) {
+      setError(error.message);
     }
   };
 
@@ -132,7 +125,7 @@ export default function AuthPage() {
         </div>
 
         <Card>
-          <form onSubmit={handleAuthAction}>
+          <form onSubmit={handleEmailAuth}>
             <CardContent className="space-y-4">
               {!isLoginView && (
                 <div className="space-y-2">
@@ -177,23 +170,33 @@ export default function AuthPage() {
               <Button type="submit" isLoading={loading} className="w-full">
                 {isLoginView ? 'Sign In' : 'Create Account'}
               </Button>
-
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                {isLoginView ? "Don't have an account?" : "Already have an account?"}
-                <button 
-                  type="button"
-                  onClick={() => {
-                    setIsLoginView(!isLoginView);
-                    setError('');
-                    setSuccessMessage('');
-                  }}
-                  className="font-semibold text-blue-600 hover:underline ml-1"
-                >
-                  {isLoginView ? 'Sign Up' : 'Sign In'}
-                </button>
-              </p>
             </CardFooter>
           </form>
+
+          {/* Divider */}
+          <div className="relative px-6 pb-4">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-gray-300 dark:border-gray-700" />
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="bg-white dark:bg-gray-900 px-2 text-gray-500 dark:text-gray-400">
+                Or continue with
+              </span>
+            </div>
+          </div>
+
+          {/* Social Login Button */}
+          <div className="p-6 pt-0">
+            <button
+              onClick={handleGoogleLogin}
+              className="w-full inline-flex items-center justify-center rounded-md text-sm font-medium border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800 h-10 px-4 py-2"
+            >
+              <svg className="mr-2 h-5 w-5" aria-hidden="true" focusable="false" data-prefix="fab" data-icon="google" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 488 512">
+                <path fill="currentColor" d="M488 261.8C488 403.3 381.5 512 244 512 110.3 512 0 401.7 0 265.4 0 129.2 109.3 20.4 244 20.4c65.4 0 123.4 26.2 165.7 68.5l-63.4 61.9C314.6 118.2 282.4 102 244 102c-83.2 0-151.2 67.3-151.2 150.4s68 150.4 151.2 150.4c97.1 0 134.3-70.2 138.6-106.4H244v-75.2h243.8c1.3 7.8 2.2 15.6 2.2 23.4z"></path>
+              </svg>
+              Sign in with Google
+            </button>
+          </div>
         </Card>
       </div>
     </div>
