@@ -5,15 +5,12 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import { Mail, Lock, User, LogIn } from 'lucide-react';
 
-// --- Reusable UI Components (Minimalist & Clean) ---
-
 const Card = ({ children, className = '' }: { children: React.ReactNode; className?: string }) => (
   <div className={`bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-sm ${className}`}>
     {children}
   </div>
 );
 
-// FIXED: Removed unused CardHeader component
 const CardContent = ({ children, className = '' }: { children: React.ReactNode; className?: string }) => <div className={`p-6 pt-0 ${className}`}>{children}</div>;
 const CardFooter = ({ children, className = '' }: { children: React.ReactNode; className?: string }) => <div className={`flex items-center p-6 pt-0 ${className}`}>{children}</div>;
 
@@ -39,7 +36,6 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(({ id, type, placeh
 ));
 Input.displayName = 'Input';
 
-
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
     isLoading?: boolean;
 }
@@ -60,9 +56,6 @@ const Button = ({ children, isLoading = false, className = '', ...props }: Butto
     {isLoading ? 'Processing...' : children}
   </button>
 );
-
-
-// --- Main Authentication Page Component ---
 
 export default function AuthPage() {
   const [isLoginView, setIsLoginView] = useState(true);
@@ -96,7 +89,7 @@ export default function AuthPage() {
         if (signUpError) throw signUpError;
         setSuccessMessage('Sign up successful! Please check your email to verify your account.');
       }
-    } catch (err) { // FIXED: Changed from 'err: any' to 'err'
+    } catch (err) {
       if (err instanceof Error) {
         setError(err.message);
       } else {
@@ -174,10 +167,20 @@ export default function AuthPage() {
               <Button type="submit" isLoading={loading} className="w-full">
                 {isLoginView ? 'Sign In' : 'Create Account'}
               </Button>
+
+              <p className="text-sm text-center text-gray-600 dark:text-gray-400">
+                {isLoginView ? "Don't have an account?" : "Already have an account?"}
+                <button 
+                  type="button"
+                  onClick={() => setIsLoginView(!isLoginView)}
+                  className="font-semibold text-blue-600 hover:underline ml-1"
+                >
+                  {isLoginView ? 'Sign Up' : 'Sign In'}
+                </button>
+              </p>
             </CardFooter>
           </form>
 
-          {/* Divider */}
           <div className="relative px-6 pb-4">
             <div className="absolute inset-0 flex items-center">
               <div className="w-full border-t border-gray-300 dark:border-gray-700" />
@@ -189,7 +192,6 @@ export default function AuthPage() {
             </div>
           </div>
 
-          {/* Social Login Button */}
           <div className="p-6 pt-0">
             <button
               onClick={handleGoogleLogin}

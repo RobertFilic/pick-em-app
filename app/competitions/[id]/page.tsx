@@ -5,13 +5,12 @@ import { supabase } from '@/lib/supabaseClient';
 import { Trophy, Clock, CheckCircle, BarChart2, Info, Calendar } from 'lucide-react';
 import Link from 'next/link';
 
-// Define the types for our data
 type Competition = {
   id: number;
   name: string;
   description: string | null;
   lock_date: string;
-  allow_draws: boolean; // This setting controls the draw option
+  allow_draws: boolean;
 };
 
 type Team = {
@@ -28,8 +27,6 @@ type Game = {
   team_a: Team | null;
   team_b: Team | null;
 };
-
-// FIXED: Removed unused 'Pick' type definition
 
 type PageProps = {
   params: { id: string };
@@ -77,7 +74,6 @@ export default function CompetitionPage({ params }: PageProps) {
           group: game.team_a ? groupMap[game.team_a.id] : null
       })) as Game[];
 
-      // Group games by date
       const gamesByDate = gamesWithGroups.reduce((acc, game) => {
         const date = new Date(game.game_date).toLocaleDateString(undefined, {
             weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
@@ -97,7 +93,7 @@ export default function CompetitionPage({ params }: PageProps) {
       }, {} as { [key: number]: string });
       setPicks(existingPicks);
 
-    } catch (err) { // FIXED: Changed from 'err: any' to 'err'
+    } catch (err) {
       if (err instanceof Error) {
         setError(err.message);
       } else {
@@ -227,6 +223,7 @@ export default function CompetitionPage({ params }: PageProps) {
                       onClick={() => handlePickChange(game.id, game.team_a!.id.toString())}
                       className={`flex flex-col items-center justify-center p-3 rounded-md border-2 transition-all ${picks[game.id] === game.team_a!.id.toString() ? 'bg-blue-600 text-white border-blue-600' : 'bg-gray-50 dark:bg-gray-800 hover:border-blue-500'}`}
                     >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={game.team_a?.logo_url || `https://placehold.co/40x40/E2E8F0/4A5568?text=${game.team_a?.name.charAt(0)}`} alt={`${game.team_a?.name} logo`} className="w-10 h-10 rounded-full mb-2"/>
                       <span className="font-semibold text-center">{game.team_a?.name}</span>
                     </button>
@@ -246,6 +243,7 @@ export default function CompetitionPage({ params }: PageProps) {
                       onClick={() => handlePickChange(game.id, game.team_b!.id.toString())}
                       className={`flex flex-col items-center justify-center p-3 rounded-md border-2 transition-all ${picks[game.id] === game.team_b!.id.toString() ? 'bg-blue-600 text-white border-blue-600' : 'bg-gray-50 dark:bg-gray-800 hover:border-blue-500'}`}
                     >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={game.team_b?.logo_url || `https://placehold.co/40x40/E2E8F0/4A5568?text=${game.team_b?.name.charAt(0)}`} alt={`${game.team_b?.name} logo`} className="w-10 h-10 rounded-full mb-2"/>
                       <span className="font-semibold text-center">{game.team_b?.name}</span>
                     </button>

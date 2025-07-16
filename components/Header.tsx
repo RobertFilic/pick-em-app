@@ -50,8 +50,8 @@ export default function Header() {
   }, [user]);
 
   const handleLogout = async () => {
-    // FIXED: Changed double quotes to single quotes to fix ESLint error
-    if (window.confirm('Are you sure you want to log out?')) {
+    // FIXED: Used double quotes to avoid apostrophe conflict
+    if (window.confirm("Are you sure you want to log out?")) {
         await supabase.auth.signOut();
         router.push('/login');
     }
