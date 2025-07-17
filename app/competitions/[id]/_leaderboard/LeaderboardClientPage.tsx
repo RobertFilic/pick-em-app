@@ -1,9 +1,3 @@
-/*
-================================================================================
-File: app/competitions/[id]/leaderboard/LeaderboardClientPage.tsx (New File)
-================================================================================
-*/
-
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
@@ -11,7 +5,6 @@ import { supabase } from '@/lib/supabaseClient';
 import { Trophy, Award, CheckCircle, XCircle, Medal } from 'lucide-react';
 import Link from 'next/link';
 
-// Define the types for our data
 type LeaderboardEntry = {
   user_id: string;
   username: string;
@@ -21,7 +14,6 @@ type LeaderboardEntry = {
   total_picks: number;
 };
 
-// This component receives the competitionId as a simple prop
 export default function LeaderboardClientPage({ competitionId }: { competitionId: number }) {
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [competitionName, setCompetitionName] = useState<string>('');
