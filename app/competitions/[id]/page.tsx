@@ -1,8 +1,16 @@
+/*
+================================================================================
+File: app/competitions/[id]/page.tsx (Updated)
+================================================================================
+This version temporarily removes the link to the leaderboard page to allow
+for a successful deployment.
+*/
+
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
-import { Trophy, Clock, CheckCircle, BarChart2, Info, Calendar } from 'lucide-react';
+import { Trophy, Clock, CheckCircle, Info, Calendar } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 
@@ -175,13 +183,7 @@ export default function CompetitionPage({ params }: { params: { id: string } }) 
               <Trophy className="w-8 h-8 mr-4 text-blue-500" />
               <h1 className="text-4xl font-bold">{competition.name}</h1>
             </div>
-            <Link 
-              href={`/competitions/${competitionId}/leaderboard`}
-              className="mt-4 sm:mt-0 inline-flex items-center justify-center px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600 font-semibold transition-colors"
-            >
-                <BarChart2 className="w-5 h-5 mr-2" />
-                View Leaderboard
-            </Link>
+            {/* The "View Leaderboard" button has been removed for this deployment */}
         </div>
         <p className="text-gray-600 dark:text-gray-400 sm:ml-12">{competition.description}</p>
         
