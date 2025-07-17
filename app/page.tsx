@@ -4,31 +4,39 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import type { User } from '@supabase/supabase-js';
 import Link from 'next/link';
+import { Trophy } from 'lucide-react';
+
+type Competition = {
+  id: number;
+  name: string;
+};
 
 export default function HomePage() {
   const [user, setUser] = useState<User | null>(null);
+  const [competitions, setCompetitions] = useState<Competition[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // This function will be called once on mount to get the initial user state
-    const setInitialUser = async () => {
+    const getInitialData = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       setUser(user);
+
+      if (user) {
+        const { data, error: fetchError } = await supabase
+          .from('competitions')
+          .select('id, name')
+          .order('created_at', { ascending: false });
+
+        if (fetchError) {
+          setError(fetchError.message);
+        } else {
+          setCompetitions(data);
+        }
+      }
       setLoading(false);
     };
-
-    setInitialUser();
-
-    // This listener will react to auth events like SIGNED_IN after the OAuth redirect
-    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
-
-    // Cleanup the listener when the component unmounts
-    return () => {
-      authListener.subscription.unsubscribe();
-    };
+    getInitialData();
   }, []);
 
   if (loading) {
@@ -48,12 +56,30 @@ export default function HomePage() {
   }
 
   return (
-    <div className="text-center p-10">
-      <h1 className="text-4xl font-bold">Welcome back!</h1>
-      <p className="text-lg text-gray-600 dark:text-gray-400 mt-2">
-        You are logged in as {user.email}.
-      </p>
-      <p className="mt-4">More features coming soon!</p>
+    <div>
+      <div className="mb-8">
+        <h1 className="text-4xl font-bold tracking-tight">Available Competitions</h1>
+        <p className="text-lg text-gray-600 dark:text-gray-400 mt-2">
+          Choose a competition to get started.
+        </p>
+      </div>
+
+      {error && <p className="text-red-500">Error: {error}</p>}
+
+      <div className="space-y-4">
+        {competitions.length > 0 ? (
+          competitions.map((comp) => (
+            <div key={comp.id} className="bg-white dark:bg-gray-900 p-4 rounded-lg border border-gray-200 dark:border-gray-800 flex items-center">
+              <Trophy className="w-6 h-6 mr-4 text-blue-500" />
+              <h2 className="text-xl font-semibold">{comp.name}</h2>
+            </div>
+          ))
+        ) : (
+          <p className="text-center text-gray-500 dark:text-gray-400">
+            No competitions have been added yet.
+          </p>
+        )}
+      </div>
     </div>
   );
 }
