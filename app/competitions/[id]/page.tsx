@@ -1,9 +1,9 @@
 import CompetitionDetailClient from './CompetitionDetailClient';
 
-interface PageProps {
-  params: { id: string }; // ✅ correct typing
-}
+type CompetitionDetailPageProps = {
+  params: { id: string };
+};
 
-export default function CompetitionDetailPage({ params }: PageProps) {
+export default function CompetitionDetailPage({ params }: CompetitionDetailPageProps) {
   return <CompetitionDetailClient id={params.id} />;
 }
