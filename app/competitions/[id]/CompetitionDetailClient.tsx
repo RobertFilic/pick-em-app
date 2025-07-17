@@ -1,4 +1,3 @@
-// app/competitions/[id]/CompetitionDetailClient.tsx
 'use client';
 
 import { useEffect, useState } from 'react';
