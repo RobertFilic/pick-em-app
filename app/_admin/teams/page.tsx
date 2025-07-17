@@ -5,7 +5,6 @@ import { supabase } from '@/lib/supabaseClient';
 import { Users, PlusCircle, Trash2 } from 'lucide-react';
 import Image from 'next/image';
 
-// Define the type for a team object
 type Team = {
   id: number;
   name: string;
@@ -13,7 +12,6 @@ type Team = {
   created_at: string;
 };
 
-// A self-contained component to handle the team avatar and its fallback logic
 const TeamAvatar = ({ team }: { team: Team }) => {
   const [imgSrc, setImgSrc] = useState(
     team.logo_url || `https://placehold.co/40x40/E2E8F0/4A5568?text=${team.name.charAt(0)}`
@@ -55,7 +53,6 @@ export default function TeamsPage() {
 
     if (error) {
       setError(error.message);
-      console.error('Error fetching teams:', error);
     } else {
       setTeams(data);
     }
@@ -79,7 +76,7 @@ export default function TeamsPage() {
       setName('');
       setLogoUrl('');
       setError(null);
-      await fetchTeams(); // Refresh the list
+      await fetchTeams();
     }
   };
   
@@ -101,7 +98,6 @@ export default function TeamsPage() {
         <h1 className="text-3xl font-bold">Manage Teams</h1>
       </div>
 
-      {/* Form to add a new team */}
       <div className="bg-white dark:bg-gray-900 p-6 rounded-lg border border-gray-200 dark:border-gray-800 mb-8">
         <h2 className="text-xl font-semibold mb-4 flex items-center">
           <PlusCircle className="w-6 h-6 mr-2" />
@@ -137,7 +133,6 @@ export default function TeamsPage() {
         </form>
       </div>
 
-      {/* List of existing teams */}
       <div className="bg-white dark:bg-gray-900 p-6 rounded-lg border border-gray-200 dark:border-gray-800">
         <h2 className="text-xl font-semibold mb-4">Existing Teams</h2>
         {loading ? (

@@ -5,10 +5,11 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import type { User } from '@supabase/supabase-js';
-import { LogOut } from 'lucide-react';
+import { LogOut, Shield } from 'lucide-react';
 
 export default function Header() {
   const [user, setUser] = useState<User | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
@@ -31,6 +32,23 @@ export default function Header() {
     };
   }, []);
 
+  useEffect(() => {
+    if (user) {
+      const fetchProfile = async () => {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('is_admin')
+          .eq('id', user.id)
+          .single();
+        
+        setIsAdmin(profile?.is_admin || false);
+      };
+      fetchProfile();
+    } else {
+      setIsAdmin(false);
+    }
+  }, [user]);
+
   const handleLogout = async () => {
     if (window.confirm("Are you sure you want to log out?")) {
         await supabase.auth.signOut();
@@ -49,6 +67,12 @@ export default function Header() {
             <div className="h-8 w-20 bg-gray-200 dark:bg-gray-700 rounded-md animate-pulse"></div>
           ) : user ? (
             <>
+              {isAdmin && (
+                <Link href="/admin" className="text-sm font-medium text-gray-600 hover:text-blue-600 dark:text-gray-300 dark:hover:text-blue-500 flex items-center transition-colors">
+                  <Shield className="w-4 h-4 mr-1.5" />
+                  Admin
+                </Link>
+              )}
               <span className="text-sm text-gray-500 dark:text-gray-400 hidden sm:inline">
                 {user.email}
               </span>
