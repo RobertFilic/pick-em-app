@@ -17,7 +17,6 @@ export default function Header() {
     const setInitialSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       setUser(session?.user ?? null);
-      setLoading(false);
     };
     
     setInitialSession();
@@ -42,10 +41,12 @@ export default function Header() {
           .single();
         
         setIsAdmin(profile?.is_admin || false);
+        setLoading(false);
       };
       fetchProfile();
     } else {
       setIsAdmin(false);
+      setLoading(false);
     }
   }, [user]);
 
