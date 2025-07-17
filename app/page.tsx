@@ -10,12 +10,25 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const getUser = async () => {
+    // This function will be called once on mount to get the initial user state
+    const setInitialUser = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       setUser(user);
       setLoading(false);
     };
-    getUser();
+
+    setInitialUser();
+
+    // This listener will react to auth events like SIGNED_IN after the OAuth redirect
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+      setLoading(false);
+    });
+
+    // Cleanup the listener when the component unmounts
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
   }, []);
 
   if (loading) {
