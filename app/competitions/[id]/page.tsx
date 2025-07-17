@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { Trophy, Clock } from 'lucide-react';
 
-export default function CompetitionDetailPage({ params }: { params: { id: string } }) {
+export default function CompetitionDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const [competitionName, setCompetitionName] = useState('');
   const [loading, setLoading] = useState(true);
 
