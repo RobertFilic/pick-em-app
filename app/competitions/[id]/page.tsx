@@ -11,7 +11,7 @@ for a successful deployment.
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { Trophy, Clock, CheckCircle, Info, Calendar } from 'lucide-react';
-import Link from 'next/link';
+// FIXED: Removed unused 'Link' import
 import Image from 'next/image';
 
 type Competition = {
