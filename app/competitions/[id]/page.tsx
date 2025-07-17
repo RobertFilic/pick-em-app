@@ -12,7 +12,8 @@ export default function CompetitionDetailPage({ params }: { params: { id: string
 
   useEffect(() => {
     const fetchCompetitionName = async () => {
-      const { data, error } = await supabase
+      // FIXED: Removed the unused 'error' variable from the destructuring
+      const { data } = await supabase
         .from('competitions')
         .select('name')
         .eq('id', competitionId)
