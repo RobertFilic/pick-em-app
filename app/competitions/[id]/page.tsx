@@ -1,5 +1,11 @@
 import CompetitionDetailClient from './CompetitionDetailClient';
 
-export default async function CompetitionDetailPage({ params }: { params: { id: string } }) {
-  return <CompetitionDetailClient id={params.id} />;
+interface Props {
+  params: Promise<{ id: string }>;
+}
+
+export default async function CompetitionDetailPage({ params }: Props) {
+  const { id } = await params;  // ✅ Await to extract id
+
+  return <CompetitionDetailClient id={id} />;
 }
