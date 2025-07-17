@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import type { User } from '@supabase/supabase-js';
 import Link from 'next/link';
-import { Trophy } from 'lucide-react';
+import { Trophy, ArrowRight } from 'lucide-react';
 
 type Competition = {
   id: number;
@@ -69,10 +69,17 @@ export default function HomePage() {
       <div className="space-y-4">
         {competitions.length > 0 ? (
           competitions.map((comp) => (
-            <div key={comp.id} className="bg-white dark:bg-gray-900 p-4 rounded-lg border border-gray-200 dark:border-gray-800 flex items-center">
-              <Trophy className="w-6 h-6 mr-4 text-blue-500" />
-              <h2 className="text-xl font-semibold">{comp.name}</h2>
-            </div>
+            <Link 
+              key={comp.id} 
+              href={`/competitions/${comp.id}`}
+              className="bg-white dark:bg-gray-900 p-4 rounded-lg border border-gray-200 dark:border-gray-800 flex items-center justify-between hover:border-blue-500 transition-all"
+            >
+              <div className="flex items-center">
+                <Trophy className="w-6 h-6 mr-4 text-blue-500" />
+                <h2 className="text-xl font-semibold">{comp.name}</h2>
+              </div>
+              <ArrowRight className="w-5 h-5 text-gray-400" />
+            </Link>
           ))
         ) : (
           <p className="text-center text-gray-500 dark:text-gray-400">
