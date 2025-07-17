@@ -115,7 +115,7 @@ export default function AuthPage() {
       <div className="w-full max-w-md mx-auto">
         <div className="text-center mb-8">
             <LogIn className="mx-auto h-12 w-12 text-blue-600"/>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mt-4">Pick 'em App</h1>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mt-4">Pick &apos;em App</h1>
             <p className="text-gray-500 dark:text-gray-400 mt-2">
                 {isLoginView ? 'Welcome back! Sign in to continue.' : 'Create an account to start playing.'}
             </p>
@@ -169,14 +169,16 @@ export default function AuthPage() {
               </Button>
 
               <p className="text-sm text-center text-gray-600 dark:text-gray-400">
-                {isLoginView ? "Don&apos;t have an account?" : "Already have an account?"}
-                <button 
-                  type="button"
-                  onClick={() => setIsLoginView(!isLoginView)}
-                  className="font-semibold text-blue-600 hover:underline ml-1"
-                >
-                  {isLoginView ? 'Sign Up' : 'Sign In'}
-                </button>
+                {isLoginView
+                    ? "Don\u2019t have an account?"
+                    : "Already have an account?"}
+                  <button
+                    type="button"
+                    onClick={() => setIsLoginView(prev => !prev)}
+                    className="font-semibold text-blue-600 hover:underline ml-1"
+                  >
+                    {isLoginView ? "Sign Up" : "Sign In"}
+                  </button>
               </p>
             </CardFooter>
           </form>

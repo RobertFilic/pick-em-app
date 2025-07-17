@@ -1,3 +1,9 @@
+/*
+================================================================================
+File: app/admin/games/page.tsx (Fix)
+================================================================================
+*/
+
 'use client';
 
 import { useState, useEffect, FormEvent } from 'react';
@@ -16,13 +22,14 @@ type Team = {
 };
 
 // This type is for displaying games, joining data from other tables
+// FIXED: The types for 'team_a' and 'team_b' are now arrays to match Supabase's return type
 type GameWithDetails = {
   id: number;
   stage: string | null;
   game_date: string;
-  competitions: { name: string } | null;
-  team_a: { name: string } | null; // Corresponds to team_a_id
-  team_b: { name: string } | null; // Corresponds to team_b_id
+  competitions: { name: string }[] | null;
+  team_a: { name: string }[] | null;
+  team_b: { name: string }[] | null;
 };
 
 export default function GamesPage() {
@@ -195,8 +202,9 @@ export default function GamesPage() {
             {games.map((game) => (
               <div key={game.id} className="grid grid-cols-[1fr_auto] items-center gap-4 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-md border border-gray-200 dark:border-gray-700">
                 <div>
-                  <p className="font-bold text-lg">{game.team_a?.name || 'N/A'} vs {game.team_b?.name || 'N/A'}</p>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">{game.competitions?.name} {game.stage ? ` - ${game.stage}` : ''}</p>
+                  {/* FIXED: Access team names from the first element of the array */}
+                  <p className="font-bold text-lg">{game.team_a?.[0]?.name || 'N/A'} vs {game.team_b?.[0]?.name || 'N/A'}</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">{game.competitions?.[0]?.name} {game.stage ? ` - ${game.stage}` : ''}</p>
                   <p className="text-sm text-gray-500 dark:text-gray-500">{new Date(game.game_date).toLocaleString()}</p>
                 </div>
                 <button 

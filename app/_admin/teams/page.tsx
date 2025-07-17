@@ -3,6 +3,7 @@
 import { useState, useEffect, FormEvent } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { Users, PlusCircle, Trash2 } from 'lucide-react';
+import Image from 'next/image';
 
 // Define the type for a team object
 type Team = {
@@ -10,6 +11,28 @@ type Team = {
   name: string;
   logo_url: string | null;
   created_at: string;
+};
+
+// A self-contained component to handle the team avatar and its fallback logic
+const TeamAvatar = ({ team }: { team: Team }) => {
+  const [imgSrc, setImgSrc] = useState(
+    team.logo_url || `https://placehold.co/40x40/E2E8F0/4A5568?text=${team.name.charAt(0)}`
+  );
+
+  useEffect(() => {
+    setImgSrc(team.logo_url || `https://placehold.co/40x40/E2E8F0/4A5568?text=${team.name.charAt(0)}`);
+  }, [team]);
+
+  return (
+    <Image
+      src={imgSrc}
+      alt={`${team.name} logo`}
+      width={40}
+      height={40}
+      className="w-10 h-10 rounded-full object-cover bg-gray-200"
+      onError={() => setImgSrc(`https://placehold.co/40x40/E2E8F0/4A5568?text=${team.name.charAt(0)}`)}
+    />
+  );
 };
 
 export default function TeamsPage() {
@@ -124,13 +147,7 @@ export default function TeamsPage() {
             {teams.map((team) => (
               <div key={team.id} className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-800/50 rounded-md border border-gray-200 dark:border-gray-700">
                 <div className="flex items-center space-x-3">
-                  {/* FIXED: Added alt attribute */}
-                  <img 
-                    src={team.logo_url || `https://placehold.co/40x40/E2E8F0/4A5568?text=${team.name.charAt(0)}`} 
-                    alt={`${team.name} logo`}
-                    className="w-10 h-10 rounded-full object-cover bg-gray-200"
-                    onError={(e) => { (e.target as HTMLImageElement).src = `https://placehold.co/40x40/E2E8F0/4A5568?text=${team.name.charAt(0)}`; }}
-                  />
+                  <TeamAvatar team={team} />
                   <p className="font-semibold">{team.name}</p>
                 </div>
                 <button 

@@ -1,3 +1,9 @@
+/*
+================================================================================
+File: app/competitions/[id]/leaderboard/LeaderboardClientPage.tsx (New File)
+================================================================================
+*/
+
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
@@ -15,18 +21,13 @@ type LeaderboardEntry = {
   total_picks: number;
 };
 
-type PageProps = {
-  params: { id: string };
-};
-
-export default function LeaderboardPage({ params }: PageProps) {
+// This component receives the competitionId as a simple prop
+export default function LeaderboardClientPage({ competitionId }: { competitionId: number }) {
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [competitionName, setCompetitionName] = useState<string>('');
   const [currentUserStats, setCurrentUserStats] = useState<LeaderboardEntry | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  const competitionId = parseInt(params.id);
 
   const getRankColor = (rank: number) => {
     if (rank === 1) return 'text-yellow-400';
@@ -40,10 +41,8 @@ export default function LeaderboardPage({ params }: PageProps) {
     setError(null);
 
     try {
-      // First, get the current user's ID
       const { data: { user } } = await supabase.auth.getUser();
 
-      // Fetch competition name and leaderboard data in parallel
       const [competitionRes, leaderboardRes] = await Promise.all([
         supabase.from('competitions').select('name').eq('id', competitionId).single(),
         supabase.rpc('get_leaderboard', { competition_id_param: competitionId })
@@ -56,14 +55,12 @@ export default function LeaderboardPage({ params }: PageProps) {
       const data = leaderboardRes.data as LeaderboardEntry[];
       setLeaderboard(data);
 
-      // Find the current user's stats from the leaderboard data
       if (user) {
         const userStats = data.find(entry => entry.user_id === user.id);
         setCurrentUserStats(userStats || null);
       }
 
-    } catch (err) { // FIXED: Changed from 'err: any' to 'err'
-      // Type guard to ensure err is an Error object
+    } catch (err) {
       if (err instanceof Error) {
         setError(err.message);
       } else {
@@ -105,7 +102,6 @@ export default function LeaderboardPage({ params }: PageProps) {
         </Link>
       </div>
 
-      {/* Current User's Stats Card */}
       {currentUserStats && (
         <div className="bg-white dark:bg-gray-900 p-6 rounded-lg border border-blue-500 mb-8 shadow-lg">
           <h2 className="text-xl font-bold flex items-center mb-4">
@@ -139,7 +135,6 @@ export default function LeaderboardPage({ params }: PageProps) {
         </div>
       )}
 
-      {/* Leaderboard Table */}
       <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 overflow-hidden">
         <table className="w-full text-left">
           <thead className="bg-gray-50 dark:bg-gray-800">
