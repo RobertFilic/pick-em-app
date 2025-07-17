@@ -224,13 +224,15 @@ export default function CompetitionDetailClient({ id }: { id: string }) {
                       onClick={() => handlePickChange(game.id, game.team_a!.id.toString())}
                       className={`flex flex-col items-center justify-center p-3 rounded-md border-2 transition-all ${picks[game.id] === game.team_a!.id.toString() ? 'bg-blue-600 text-white border-blue-600' : 'bg-gray-50 dark:bg-gray-800 hover:border-blue-500'}`}
                     >
-                      <Image 
-                        src={game.team_a?.logo_url || `https://placehold.co/40x40/E2E8F0/4A5568?text=${game.team_a?.name.charAt(0)}`} 
-                        alt={`${game.team_a?.name} logo`} 
-                        width={40}
-                        height={40}
-                        className="w-10 h-10 rounded-full mb-2 object-cover"
-                      />
+                      {game.team_a?.logo_url && (
+                        <Image 
+                          src={game.team_a.logo_url} 
+                          alt={`${game.team_a.name} logo`} 
+                          width={40}
+                          height={40}
+                          className="w-10 h-10 rounded-full mb-2 object-cover"
+                        />
+                      )}
                       <span className="font-semibold text-center">{game.team_a?.name}</span>
                     </button>
                     
@@ -249,13 +251,15 @@ export default function CompetitionDetailClient({ id }: { id: string }) {
                       onClick={() => handlePickChange(game.id, game.team_b!.id.toString())}
                       className={`flex flex-col items-center justify-center p-3 rounded-md border-2 transition-all ${picks[game.id] === game.team_b!.id.toString() ? 'bg-blue-600 text-white border-blue-600' : 'bg-gray-50 dark:bg-gray-800 hover:border-blue-500'}`}
                     >
-                      <Image 
-                        src={game.team_b?.logo_url || `https://placehold.co/40x40/E2E8F0/4A5568?text=${game.team_b?.name.charAt(0)}`} 
-                        alt={`${game.team_b?.name} logo`} 
-                        width={40}
-                        height={40}
-                        className="w-10 h-10 rounded-full mb-2 object-cover"
-                      />
+                      {game.team_b?.logo_url && (
+                        <Image 
+                          src={game.team_b.logo_url} 
+                          alt={`${game.team_b.name} logo`} 
+                          width={40}
+                          height={40}
+                          className="w-10 h-10 rounded-full mb-2 object-cover"
+                        />
+                      )}
                       <span className="font-semibold text-center">{game.team_b?.name}</span>
                     </button>
                   </div>
