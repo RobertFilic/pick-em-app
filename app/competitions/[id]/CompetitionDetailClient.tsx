@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
-import { Trophy, Clock, Calendar, CheckCircle, BarChart2, Info } from 'lucide-react';
+import { Trophy, Clock, Calendar, CheckCircle, BarChart2, Info, HelpCircle } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 
@@ -30,11 +30,18 @@ type Game = {
   team_b: Team | null;
 };
 
+type PropPrediction = {
+  id: number;
+  question: string;
+  lock_date: string;
+};
+
 // This component receives the competition ID as a simple prop
 export default function CompetitionDetailClient({ id }: { id: string }) {
   const [competition, setCompetition] = useState<Competition | null>(null);
   const [groupedGames, setGroupedGames] = useState<{ [key: string]: Game[] }>({});
-  const [picks, setPicks] = useState<{ [key: number]: string }>({});
+  const [propPredictions, setPropPredictions] = useState<PropPrediction[]>([]);
+  const [picks, setPicks] = useState<{ [key: string]: string }>({}); // Key can be game_id or prop_id
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -43,19 +50,18 @@ export default function CompetitionDetailClient({ id }: { id: string }) {
 
   const competitionId = parseInt(id, 10);
 
-  const isGameLocked = (gameDate: string) => new Date(gameDate) < new Date();
+  const isLocked = (lockDate: string) => new Date(lockDate) < new Date();
 
-  // Use useCallback to memoize the fetch function
   const fetchCompetitionData = useCallback(async (currentUserId: string) => {
     setLoading(true);
     setError(null);
     try {
-      // Fetch competition name and games in parallel
-      const [competitionRes, gamesRes, groupingsRes, picksRes] = await Promise.all([
+      const [competitionRes, gamesRes, groupingsRes, propPredictionsRes, picksRes] = await Promise.all([
         supabase.from('competitions').select('*').eq('id', competitionId).single(),
         supabase.from('games').select('*, team_a:teams!games_team_a_id_fkey(*), team_b:teams!games_team_b_id_fkey(*)').eq('competition_id', competitionId).order('game_date', { ascending: true }),
         supabase.from('competition_teams').select('team_id, group').eq('competition_id', competitionId),
-        supabase.from('user_picks').select('game_id, pick').eq('user_id', currentUserId).eq('competition_id', competitionId),
+        supabase.from('prop_predictions').select('*').eq('competition_id', competitionId).order('lock_date', { ascending: true }),
+        supabase.from('user_picks').select('game_id, prop_prediction_id, pick').eq('user_id', currentUserId).eq('competition_id', competitionId),
       ]);
 
       if (competitionRes.error) throw competitionRes.error;
@@ -78,28 +84,26 @@ export default function CompetitionDetailClient({ id }: { id: string }) {
         const date = new Date(game.game_date).toLocaleDateString(undefined, {
             weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
         });
-        if (!acc[date]) {
-            acc[date] = [];
-        }
+        if (!acc[date]) { acc[date] = []; }
         acc[date].push(game);
         return acc;
       }, {} as { [key: string]: Game[] });
       setGroupedGames(gamesByDate);
       
+      if (propPredictionsRes.error) throw propPredictionsRes.error;
+      setPropPredictions(propPredictionsRes.data);
+
       if (picksRes.error) throw picksRes.error;
       const existingPicks = picksRes.data.reduce((acc, pick) => {
-        acc[pick.game_id] = pick.pick;
+        const key = pick.game_id ? `game_${pick.game_id}` : `prop_${pick.prop_prediction_id}`;
+        acc[key] = pick.pick;
         return acc;
-      }, {} as { [key: number]: string });
+      }, {} as { [key: string]: string });
       setPicks(existingPicks);
 
-
     } catch (err) {
-      if (err instanceof Error) {
-        setError(err.message);
-      } else {
-        setError("An unknown error occurred");
-      }
+      if (err instanceof Error) { setError(err.message); } 
+      else { setError("An unknown error occurred"); }
       console.error("Error fetching data:", err);
     } finally {
       setLoading(false);
@@ -120,8 +124,9 @@ export default function CompetitionDetailClient({ id }: { id: string }) {
     getAndSetUser();
   }, [fetchCompetitionData]);
   
-  const handlePickChange = (gameId: number, pick: string) => {
-    setPicks(prev => ({ ...prev, [gameId]: pick }));
+  const handlePickChange = (type: 'game' | 'prop', id: number, pickValue: string) => {
+    const key = `${type}_${id}`;
+    setPicks(prev => ({ ...prev, [key]: pickValue }));
   };
 
   const handleSubmitPicks = async () => {
@@ -133,12 +138,16 @@ export default function CompetitionDetailClient({ id }: { id: string }) {
     setError(null);
     setSuccess(null);
 
-    const picksToUpsert = Object.entries(picks).map(([game_id, pick]) => ({
-      user_id: userId,
-      competition_id: competitionId,
-      game_id: parseInt(game_id),
-      pick: pick,
-    }));
+    const picksToUpsert = Object.entries(picks).map(([key, pick]) => {
+      const [type, id] = key.split('_');
+      return {
+        user_id: userId,
+        competition_id: competitionId,
+        game_id: type === 'game' ? parseInt(id) : null,
+        prop_prediction_id: type === 'prop' ? parseInt(id) : null,
+        pick: pick,
+      };
+    });
 
     if (picksToUpsert.length === 0) {
         setError("You haven't made any picks.");
@@ -147,7 +156,7 @@ export default function CompetitionDetailClient({ id }: { id: string }) {
     }
 
     const { error: upsertError } = await supabase.from('user_picks').upsert(picksToUpsert, {
-      onConflict: 'user_id, game_id',
+      onConflict: 'user_id, game_id, prop_prediction_id',
     });
 
     if (upsertError) {
@@ -159,17 +168,9 @@ export default function CompetitionDetailClient({ id }: { id: string }) {
     setSubmitting(false);
   };
 
-  if (loading) {
-    return <div className="text-center p-10">Loading competition...</div>;
-  }
-  
-  if (error) {
-    return <div className="text-center p-10 text-red-500">Error: {error}</div>;
-  }
-  
-  if (!competition) {
-    return <div className="text-center p-10">Competition not found.</div>;
-  }
+  if (loading) { return <div className="text-center p-10">Loading competition...</div>; }
+  if (error) { return <div className="text-center p-10 text-red-500">Error: {error}</div>; }
+  if (!competition) { return <div className="text-center p-10">Competition not found.</div>; }
 
   return (
     <div>
@@ -198,6 +199,47 @@ export default function CompetitionDetailClient({ id }: { id: string }) {
         </div>
       </div>
 
+      {/* Special Events Section */}
+      {propPredictions.length > 0 && (
+        <div className="mb-8">
+          <h2 className="text-2xl font-bold mb-4 flex items-center text-gray-700 dark:text-gray-300">
+            <HelpCircle className="w-7 h-7 mr-3" />
+            Special Events
+          </h2>
+          <div className="space-y-4">
+            {propPredictions.map(prop => (
+              <div key={prop.id} className={`bg-white dark:bg-gray-900 p-4 rounded-lg border border-gray-200 dark:border-gray-800 ${isLocked(prop.lock_date) ? 'opacity-60' : ''}`}>
+                <div className="flex justify-between items-center mb-3">
+                  <p className="font-semibold">{prop.question}</p>
+                  <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
+                    <Clock className="w-4 h-4 mr-1.5"/>
+                    Locks on: {new Date(prop.lock_date).toLocaleString()}
+                    {isLocked(prop.lock_date) && <span className="ml-2 text-xs font-bold text-red-500">(LOCKED)</span>}
+                  </div>
+                </div>
+                <div className="flex items-center space-x-2">
+                    <button 
+                        disabled={isLocked(prop.lock_date)}
+                        onClick={() => handlePickChange('prop', prop.id, 'Yes')}
+                        className={`w-full p-2 rounded-md border-2 font-semibold transition-all ${picks[`prop_${prop.id}`] === 'Yes' ? 'bg-blue-600 text-white border-blue-600' : 'bg-gray-50 dark:bg-gray-800 hover:border-blue-500'}`}
+                    >
+                        Yes
+                    </button>
+                    <button 
+                        disabled={isLocked(prop.lock_date)}
+                        onClick={() => handlePickChange('prop', prop.id, 'No')}
+                        className={`w-full p-2 rounded-md border-2 font-semibold transition-all ${picks[`prop_${prop.id}`] === 'No' ? 'bg-blue-600 text-white border-blue-600' : 'bg-gray-50 dark:bg-gray-800 hover:border-blue-500'}`}
+                    >
+                        No
+                    </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Games Section */}
       <div className="space-y-8">
         {Object.entries(groupedGames).map(([date, gamesOnDate]) => (
           <div key={date}>
@@ -207,7 +249,7 @@ export default function CompetitionDetailClient({ id }: { id: string }) {
             </h2>
             <div className="space-y-6">
               {gamesOnDate.map(game => (
-                <div key={game.id} className={`bg-white dark:bg-gray-900 p-4 rounded-lg border border-gray-200 dark:border-gray-800 ${isGameLocked(game.game_date) ? 'opacity-60' : ''}`}>
+                <div key={game.id} className={`bg-white dark:bg-gray-900 p-4 rounded-lg border border-gray-200 dark:border-gray-800 ${isLocked(game.game_date) ? 'opacity-60' : ''}`}>
                   <div className="flex justify-between items-center mb-3">
                     <p className="text-sm font-semibold text-gray-500 dark:text-gray-400">
                       {game.stage} {game.group ? `- ${game.group}` : ''}
@@ -215,14 +257,14 @@ export default function CompetitionDetailClient({ id }: { id: string }) {
                     <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
                       <Clock className="w-4 h-4 mr-1.5"/>
                       {new Date(game.game_date).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}
-                      {isGameLocked(game.game_date) && <span className="ml-2 text-xs font-bold text-red-500">(LOCKED)</span>}
+                      {isLocked(game.game_date) && <span className="ml-2 text-xs font-bold text-red-500">(LOCKED)</span>}
                     </div>
                   </div>
                   <div className={`grid ${competition.allow_draws === true ? 'grid-cols-3' : 'grid-cols-2'} gap-2 items-center`}>
                     <button 
-                      disabled={isGameLocked(game.game_date)}
-                      onClick={() => handlePickChange(game.id, game.team_a!.id.toString())}
-                      className={`flex flex-col items-center justify-center p-3 rounded-md border-2 transition-all ${picks[game.id] === game.team_a!.id.toString() ? 'bg-blue-600 text-white border-blue-600' : 'bg-gray-50 dark:bg-gray-800 hover:border-blue-500'}`}
+                      disabled={isLocked(game.game_date)}
+                      onClick={() => handlePickChange('game', game.id, game.team_a!.id.toString())}
+                      className={`flex flex-col items-center justify-center p-3 rounded-md border-2 transition-all ${picks[`game_${game.id}`] === game.team_a!.id.toString() ? 'bg-blue-600 text-white border-blue-600' : 'bg-gray-50 dark:bg-gray-800 hover:border-blue-500'}`}
                     >
                       {game.team_a?.logo_url && (
                         <Image 
@@ -238,18 +280,18 @@ export default function CompetitionDetailClient({ id }: { id: string }) {
                     
                     {competition.allow_draws === true && (
                       <button 
-                        disabled={isGameLocked(game.game_date)}
-                        onClick={() => handlePickChange(game.id, 'draw')}
-                        className={`flex flex-col items-center justify-center p-3 rounded-md border-2 h-full transition-all ${picks[game.id] === 'draw' ? 'bg-blue-600 text-white border-blue-600' : 'bg-gray-50 dark:bg-gray-800 hover:border-blue-500'}`}
+                        disabled={isLocked(game.game_date)}
+                        onClick={() => handlePickChange('game', game.id, 'draw')}
+                        className={`flex flex-col items-center justify-center p-3 rounded-md border-2 h-full transition-all ${picks[`game_${game.id}`] === 'draw' ? 'bg-blue-600 text-white border-blue-600' : 'bg-gray-50 dark:bg-gray-800 hover:border-blue-500'}`}
                       >
                         <span className="font-bold text-lg">DRAW</span>
                       </button>
                     )}
 
                     <button 
-                      disabled={isGameLocked(game.game_date)}
-                      onClick={() => handlePickChange(game.id, game.team_b!.id.toString())}
-                      className={`flex flex-col items-center justify-center p-3 rounded-md border-2 transition-all ${picks[game.id] === game.team_b!.id.toString() ? 'bg-blue-600 text-white border-blue-600' : 'bg-gray-50 dark:bg-gray-800 hover:border-blue-500'}`}
+                      disabled={isLocked(game.game_date)}
+                      onClick={() => handlePickChange('game', game.id, game.team_b!.id.toString())}
+                      className={`flex flex-col items-center justify-center p-3 rounded-md border-2 transition-all ${picks[`game_${game.id}`] === game.team_b!.id.toString() ? 'bg-blue-600 text-white border-blue-600' : 'bg-gray-50 dark:bg-gray-800 hover:border-blue-500'}`}
                     >
                       {game.team_b?.logo_url && (
                         <Image 
