@@ -1,10 +1,12 @@
 'use client';
 
-import { useState, useEffect, FormEvent } from 'react';
+import { useState, useEffect, FormEvent, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { Gamepad2, PlusCircle, Trash2 } from 'lucide-react';
 
-// Define the types for our data structures
+// --- Type Definitions ---
+// These types define the shape of the data we expect from our database.
+
 type Competition = {
   id: number;
   name: string;
@@ -15,9 +17,8 @@ type Team = {
   name: string;
 };
 
-// This type is for displaying games, joining data from other tables
-// FIXED: The types for joined tables are now correctly defined as arrays
-// to match the data structure returned by the Supabase query during build.
+// This is the main type for displaying a game with all its details.
+// It correctly defines the shape of the joined data from Supabase.
 type GameWithDetails = {
   id: number;
   stage: string | null;
@@ -27,12 +28,15 @@ type GameWithDetails = {
   team_b: { name: string } | null;
 };
 
+// --- Main Page Component ---
+
 export default function GamesPage() {
+  // --- State Management ---
   const [games, setGames] = useState<GameWithDetails[]>([]);
   const [competitions, setCompetitions] = useState<Competition[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
   
-  // Form state
+  // Form state for creating a new game
   const [competitionId, setCompetitionId] = useState('');
   const [teamAId, setTeamAId] = useState('');
   const [teamBId, setTeamBId] = useState('');
@@ -42,6 +46,46 @@ export default function GamesPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // --- Data Fetching ---
+
+  const fetchGames = useCallback(async () => {
+    // This query is structured to be robust and clear. It renames the foreign
+    // key columns to fetch the related team and competition names.
+    const { data, error } = await supabase
+      .from('games')
+      .select(`
+        id,
+        stage,
+        game_date,
+        competitions ( name ),
+        team_a: team_a_id ( name ),
+        team_b: team_b_id ( name )
+      `)
+      .order('game_date', { ascending: false });
+
+    if (error) {
+      setError(error.message);
+      console.error('Error fetching games:', error);
+    } else {
+      // Filter out any games that might have broken relationships (e.g., a deleted team)
+      const validGames = data.filter(game => game.team_a && game.team_b && game.competitions);
+      setGames(validGames as GameWithDetails[]);
+    }
+  }, []);
+
+  const fetchCompetitions = useCallback(async () => {
+    const { data, error } = await supabase.from('competitions').select('id, name');
+    if (error) console.error('Error fetching competitions:', error.message);
+    else setCompetitions(data || []);
+  }, []);
+
+  const fetchTeams = useCallback(async () => {
+    const { data, error } = await supabase.from('teams').select('id, name').order('name');
+    if (error) console.error('Error fetching teams:', error.message);
+    else setTeams(data || []);
+  }, []);
+
+  // Effect to fetch all necessary data when the component mounts
   useEffect(() => {
     const fetchInitialData = async () => {
       setLoading(true);
@@ -53,40 +97,9 @@ export default function GamesPage() {
       setLoading(false);
     };
     fetchInitialData();
-  }, []);
+  }, [fetchGames, fetchCompetitions, fetchTeams]);
 
-  const fetchGames = async () => {
-    const { data, error } = await supabase
-      .from('games')
-      .select(`
-        id,
-        stage,
-        game_date,
-        competitions: competition_id ( name ),
-        team_a: team_a_id ( name ),
-        team_b: team_b_id ( name )
-      `)
-      .order('game_date', { ascending: false });
-
-    if (error) {
-      setError(error.message);
-      console.error('Error fetching games:', error);
-    } else {
-      setGames(data as GameWithDetails[]);
-    }
-  };
-
-  const fetchCompetitions = async () => {
-    const { data, error } = await supabase.from('competitions').select('id, name');
-    if (error) console.error('Error fetching competitions:', error.message);
-    else setCompetitions(data);
-  };
-
-  const fetchTeams = async () => {
-    const { data, error } = await supabase.from('teams').select('id, name').order('name');
-    if (error) console.error('Error fetching teams:', error.message);
-    else setTeams(data);
-  };
+  // --- Event Handlers ---
 
   const handleAddGame = async (e: FormEvent) => {
     e.preventDefault();
@@ -114,6 +127,7 @@ export default function GamesPage() {
     if (insertError) {
       setError(insertError.message);
     } else {
+      // Reset form and refresh the game list
       setCompetitionId('');
       setTeamAId('');
       setTeamBId('');
@@ -134,6 +148,8 @@ export default function GamesPage() {
     }
   }
 
+  // --- JSX Rendering ---
+
   return (
     <div>
       <div className="flex items-center mb-6">
@@ -141,6 +157,7 @@ export default function GamesPage() {
         <h1 className="text-3xl font-bold">Manage Games</h1>
       </div>
 
+      {/* Form to add a new game */}
       <div className="bg-white dark:bg-gray-900 p-6 rounded-lg border border-gray-200 dark:border-gray-800 mb-8">
         <h2 className="text-xl font-semibold mb-4 flex items-center">
           <PlusCircle className="w-6 h-6 mr-2" />
@@ -185,14 +202,15 @@ export default function GamesPage() {
         </form>
       </div>
 
+      {/* List of existing games */}
       <div className="bg-white dark:bg-gray-900 p-6 rounded-lg border border-gray-200 dark:border-gray-800">
         <h2 className="text-xl font-semibold mb-4">Scheduled Games</h2>
         {loading ? <p>Loading...</p> : (
           <div className="space-y-3">
+            {games.length === 0 && <p className="text-gray-500">No games scheduled.</p>}
             {games.map((game) => (
               <div key={game.id} className="grid grid-cols-[1fr_auto] items-center gap-4 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-md border border-gray-200 dark:border-gray-700">
                 <div>
-                  {/* FIXED: Access names from the first element of the array */}
                   <p className="font-bold text-lg">{game.team_a?.name || 'N/A'} vs {game.team_b?.name || 'N/A'}</p>
                   <p className="text-sm text-gray-600 dark:text-gray-400">{game.competitions?.name} {game.stage ? ` - ${game.stage}` : ''}</p>
                   <p className="text-sm text-gray-500 dark:text-gray-500">{new Date(game.game_date).toLocaleString()}</p>
