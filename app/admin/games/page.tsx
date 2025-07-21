@@ -65,7 +65,8 @@ export default function GamesPage() {
       setError(error.message);
       console.error('Error fetching games:', error);
     } else {
-      // The type assertion is still needed, but now the types match.
+      // ADDED: console.log to inspect the data from Supabase
+      console.log('Fetched games data:', data);
       setGames(data as GameWithDetails[]);
     }
   }, []);
