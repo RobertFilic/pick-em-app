@@ -34,7 +34,6 @@ export default function ResultsPage() {
   const [completedProps, setCompletedProps] = useState<PropPredictionResult[]>([]);
   
   const [results, setResults] = useState<{ [key: number]: string }>({});
-  const [propAnswers, setPropAnswers] = useState<{ [key: number]: string }>({});
   const [editingGameId, setEditingGameId] = useState<number | null>(null);
   
   const [loading, setLoading] = useState(true);
@@ -145,19 +144,13 @@ export default function ResultsPage() {
     }
   };
 
-  const handleSubmitPropResult = async (propId: number) => {
-    const answer = propAnswers[propId];
-    if (!answer || answer.trim() === '') {
-        setError('Please enter an answer for this event.');
-        return;
-    }
-    
+  const handleSubmitPropResult = async (propId: number, answer: 'Yes' | 'No') => {
     setSuccess(null);
     setError(null);
 
     const { error: updateError } = await supabase
         .from('prop_predictions')
-        .update({ correct_answer: answer.trim() })
+        .update({ correct_answer: answer })
         .eq('id', propId);
 
     if (updateError) {
@@ -231,14 +224,11 @@ export default function ResultsPage() {
               <div key={prop.id} className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-md border border-gray-200 dark:border-gray-700">
                 <p className="font-semibold">{prop.question}</p>
                 <div className="flex items-center gap-2 mt-2">
-                    <input 
-                        type="text" 
-                        placeholder="Enter correct answer (e.g., Yes)"
-                        onChange={(e) => setPropAnswers(prev => ({...prev, [prop.id]: e.target.value}))}
-                        className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-800 border-gray-300 dark:border-gray-700"
-                    />
-                    <button onClick={() => handleSubmitPropResult(prop.id)} className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 font-semibold">
-                        Save
+                    <button onClick={() => handleSubmitPropResult(prop.id, 'Yes')} className="w-full px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 font-semibold">
+                        Mark as YES
+                    </button>
+                    <button onClick={() => handleSubmitPropResult(prop.id, 'No')} className="w-full px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 font-semibold">
+                        Mark as NO
                     </button>
                 </div>
               </div>
