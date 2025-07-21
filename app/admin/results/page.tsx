@@ -2,11 +2,10 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
-import { ClipboardList, CheckCircle, Edit, XCircle, CalendarClock } from 'lucide-react';
+import { ClipboardList, CheckCircle, Edit, XCircle, CalendarClock, HelpCircle } from 'lucide-react';
 
 // --- Type Definitions ---
 
-// This type represents the clean, final shape of our game data.
 type GameForResult = {
   id: number;
   stage: string | null;
@@ -18,18 +17,11 @@ type GameForResult = {
   is_draw: boolean;
 };
 
-// This type represents the raw data shape from Supabase, which can be inconsistent.
-type RawGameData = {
+type PropPredictionResult = {
   id: number;
-  stage: string | null;
-  game_date: string;
-  winning_team_id: number | null;
-  is_draw: boolean;
-  competitions: { name: string } | { name: string }[] | null;
-  team_a: { id: number; name: string } | { id: number; name: string }[] | null;
-  team_b: { id: number; name: string } | { id: number; name: string }[] | null;
+  question: string;
+  correct_answer: string | null;
 };
-
 
 // --- Main Page Component ---
 export default function ResultsPage() {
@@ -37,7 +29,11 @@ export default function ResultsPage() {
   const [pendingGames, setPendingGames] = useState<GameForResult[]>([]);
   const [completedGames, setCompletedGames] = useState<GameForResult[]>([]);
   const [scheduledGames, setScheduledGames] = useState<GameForResult[]>([]);
+  const [pendingProps, setPendingProps] = useState<PropPredictionResult[]>([]);
+  const [completedProps, setCompletedProps] = useState<PropPredictionResult[]>([]);
+  
   const [results, setResults] = useState<{ [key: number]: string }>({});
+  const [propAnswers, setPropAnswers] = useState<{ [key: number]: string }>({});
   const [editingGameId, setEditingGameId] = useState<number | null>(null);
   
   const [loading, setLoading] = useState(true);
@@ -45,41 +41,27 @@ export default function ResultsPage() {
   const [success, setSuccess] = useState<string | null>(null);
 
   // --- Data Fetching ---
-  const fetchAllGames = useCallback(async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true);
     setError(null);
     
-    const { data, error: fetchError } = await supabase
-      .from('games')
-      .select(`
-        id, stage, game_date, winning_team_id, is_draw,
-        competitions ( name ),
-        team_a: team_a_id ( id, name ),
-        team_b: team_b_id ( id, name )
-      `)
-      .order('game_date', { ascending: true });
+    const [gamesRes, propsRes] = await Promise.all([
+      supabase
+        .from('games')
+        .select(`id, stage, game_date, winning_team_id, is_draw, competitions ( name ), team_a: team_a_id ( id, name ), team_b: team_b_id ( id, name )`)
+        .order('game_date', { ascending: true }),
+      supabase
+        .from('prop_predictions')
+        .select('id, question, correct_answer')
+        .order('lock_date', { ascending: true })
+    ]);
 
-    if (fetchError) {
-      setError(fetchError.message);
-      console.error('Error fetching games:', fetchError);
-    } else if (data) {
+    if (gamesRes.error) {
+      setError(gamesRes.error.message);
+      console.error('Error fetching games:', gamesRes.error);
+    } else if (gamesRes.data) {
       const now = new Date();
-      
-      // FIXED: This function now uses a specific type instead of 'any'.
-      const transformData = (gameData: RawGameData): GameForResult => ({
-        id: gameData.id,
-        stage: gameData.stage,
-        game_date: gameData.game_date,
-        winning_team_id: gameData.winning_team_id,
-        is_draw: gameData.is_draw,
-        competitions: Array.isArray(gameData.competitions) ? gameData.competitions[0] : gameData.competitions,
-        team_a: Array.isArray(gameData.team_a) ? gameData.team_a[0] : gameData.team_a,
-        team_b: Array.isArray(gameData.team_b) ? gameData.team_b[0] : gameData.team_b,
-      });
-
-      const validGames = data
-        .map(transformData)
-        .filter(game => game.team_a && game.team_b);
+      const validGames = gamesRes.data.filter(game => game.team_a && game.team_b);
 
       const pastGames = validGames.filter(game => new Date(game.game_date) < now);
       const futureGames = validGames.filter(game => new Date(game.game_date) >= now);
@@ -87,16 +69,27 @@ export default function ResultsPage() {
       const pending = pastGames.filter(game => game.winning_team_id === null && !game.is_draw);
       const completed = pastGames.filter(game => game.winning_team_id !== null || game.is_draw);
       
-      setPendingGames(pending.reverse());
-      setCompletedGames(completed.reverse());
-      setScheduledGames(futureGames);
+      setPendingGames(pending.reverse() as GameForResult[]);
+      setCompletedGames(completed.reverse() as GameForResult[]);
+      setScheduledGames(futureGames as GameForResult[]);
     }
+
+    if (propsRes.error) {
+        setError(propsRes.error.message);
+        console.error('Error fetching prop predictions:', propsRes.error);
+    } else if (propsRes.data) {
+        const pending = propsRes.data.filter(p => p.correct_answer === null);
+        const completed = propsRes.data.filter(p => p.correct_answer !== null);
+        setPendingProps(pending);
+        setCompletedProps(completed);
+    }
+
     setLoading(false);
   }, []);
 
   useEffect(() => {
-    fetchAllGames();
-  }, [fetchAllGames]);
+    fetchData();
+  }, [fetchData]);
 
   // --- Event Handlers ---
   const handleResultChange = (gameId: number, result: string) => {
@@ -143,7 +136,30 @@ export default function ResultsPage() {
     } else {
       setSuccess(`Result for game ${gameId} has been saved.`);
       setEditingGameId(null);
-      await fetchAllGames();
+      await fetchData();
+    }
+  };
+
+  const handleSubmitPropResult = async (propId: number) => {
+    const answer = propAnswers[propId];
+    if (!answer || answer.trim() === '') {
+        setError('Please enter an answer for this event.');
+        return;
+    }
+    
+    setSuccess(null);
+    setError(null);
+
+    const { error: updateError } = await supabase
+        .from('prop_predictions')
+        .update({ correct_answer: answer.trim() })
+        .eq('id', propId);
+
+    if (updateError) {
+        setError(updateError.message);
+    } else {
+        setSuccess(`Result for special event ${propId} has been saved.`);
+        await fetchData();
     }
   };
   
@@ -193,14 +209,58 @@ export default function ResultsPage() {
     <div>
       <div className="flex items-center mb-6">
         <ClipboardList className="w-8 h-8 mr-3 text-blue-600" />
-        <h1 className="text-3xl font-bold">Game Results Overview</h1>
+        <h1 className="text-3xl font-bold">Results Overview</h1>
       </div>
       
       {success && <p className="bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-300 p-3 rounded-md mb-4">{success}</p>}
       {error && <p className="bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-300 p-3 rounded-md mb-4">{error}</p>}
 
+      {/* Special Events Sections */}
       <div className="bg-white dark:bg-gray-900 p-6 rounded-lg border border-gray-200 dark:border-gray-800 mb-8">
-        <h2 className="text-xl font-semibold mb-4">Pending Results</h2>
+        <h2 className="text-xl font-semibold mb-4 flex items-center"><HelpCircle className="w-6 h-6 mr-2 text-blue-500"/>Pending Special Event Results</h2>
+        {loading ? <p>Loading...</p> : pendingProps.length === 0 ? (
+          <p className="text-gray-500 dark:text-gray-400">No special events are currently awaiting results.</p>
+        ) : (
+          <div className="space-y-4">
+            {pendingProps.map((prop) => (
+              <div key={prop.id} className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-md border border-gray-200 dark:border-gray-700">
+                <p className="font-semibold">{prop.question}</p>
+                <div className="flex items-center gap-2 mt-2">
+                    <input 
+                        type="text" 
+                        placeholder="Enter correct answer (e.g., Yes)"
+                        onChange={(e) => setPropAnswers(prev => ({...prev, [prop.id]: e.target.value}))}
+                        className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-800 border-gray-300 dark:border-gray-700"
+                    />
+                    <button onClick={() => handleSubmitPropResult(prop.id)} className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 font-semibold">
+                        Save
+                    </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="bg-white dark:bg-gray-900 p-6 rounded-lg border border-gray-200 dark:border-gray-800 mb-8">
+        <h2 className="text-xl font-semibold mb-4">Completed Special Event Results</h2>
+        {loading ? <p>Loading...</p> : completedProps.length === 0 ? (
+          <p className="text-gray-500 dark:text-gray-400">No special event results have been entered yet.</p>
+        ) : (
+          <div className="space-y-4">
+            {completedProps.map((prop) => (
+              <div key={prop.id} className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-md border border-gray-200 dark:border-gray-700">
+                <p className="font-semibold">{prop.question}</p>
+                <p className="font-bold text-green-600 dark:text-green-400 mt-1">Answer: {prop.correct_answer}</p>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Game Sections */}
+      <div className="bg-white dark:bg-gray-900 p-6 rounded-lg border border-gray-200 dark:border-gray-800 mb-8">
+        <h2 className="text-xl font-semibold mb-4">Pending Game Results</h2>
         {loading ? <p>Loading...</p> : pendingGames.length === 0 ? (
           <p className="text-gray-500 dark:text-gray-400">No games are currently awaiting results.</p>
         ) : (
@@ -217,9 +277,9 @@ export default function ResultsPage() {
       </div>
 
       <div className="bg-white dark:bg-gray-900 p-6 rounded-lg border border-gray-200 dark:border-gray-800 mb-8">
-        <h2 className="text-xl font-semibold mb-4">Completed Results</h2>
+        <h2 className="text-xl font-semibold mb-4">Completed Game Results</h2>
         {loading ? <p>Loading...</p> : completedGames.length === 0 ? (
-          <p className="text-gray-500 dark:text-gray-400">No results have been entered yet.</p>
+          <p className="text-gray-500 dark:text-gray-400">No game results have been entered yet.</p>
         ) : (
           <div className="space-y-4">
             {completedGames.map((game) => (
@@ -256,7 +316,7 @@ export default function ResultsPage() {
             Upcoming Scheduled Games
         </h2>
         {loading ? <p>Loading...</p> : scheduledGames.length === 0 ? (
-            <p className="text-gray-500 dark:text-gray-400">No games are scheduled for the future.</p>
+          <p className="text-gray-500 dark:text-gray-400">No games are scheduled for the future.</p>
         ) : (
           <div className="space-y-4">
                 {scheduledGames.map((game) => (
