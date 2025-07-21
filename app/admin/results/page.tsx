@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { ClipboardList, CheckCircle, Edit, XCircle, CalendarClock } from 'lucide-react';
 
+// Clean type used by your app
 type GameForResult = {
   id: number;
   stage: string | null;
@@ -13,6 +14,18 @@ type GameForResult = {
   team_b: { id: number; name: string } | null;
   winning_team_id: number | null;
   is_draw: boolean;
+};
+
+// Type matching Supabase's raw join structure
+type SupabaseGameRaw = {
+  id: number;
+  stage: string | null;
+  game_date: string;
+  winning_team_id: number | null;
+  is_draw: boolean;
+  competitions: { name: string }[] | null;
+  team_a: { id: number; name: string }[] | null;
+  team_b: { id: number; name: string }[] | null;
 };
 
 export default function ResultsPage() {
@@ -46,19 +59,18 @@ export default function ResultsPage() {
       return;
     }
 
-    // Safely parse and flatten the nested results
-    const now = new Date();
-
-    const parsedGames: GameForResult[] = (data || []).map((game: any) => ({
+    const parsedGames: GameForResult[] = (data as SupabaseGameRaw[]).map((game) => ({
       id: game.id,
       stage: game.stage,
       game_date: game.game_date,
       winning_team_id: game.winning_team_id,
       is_draw: game.is_draw,
-      competitions: Array.isArray(game.competitions) ? game.competitions[0] : game.competitions,
-      team_a: Array.isArray(game.team_a) ? game.team_a[0] : game.team_a,
-      team_b: Array.isArray(game.team_b) ? game.team_b[0] : game.team_b,
+      competitions: game.competitions?.[0] || null,
+      team_a: game.team_a?.[0] || null,
+      team_b: game.team_b?.[0] || null,
     }));
+
+    const now = new Date();
 
     const validGames = parsedGames.filter(game => game.team_a && game.team_b);
 
@@ -68,8 +80,8 @@ export default function ResultsPage() {
     const pending = pastGames.filter(game => game.winning_team_id === null && !game.is_draw);
     const completed = pastGames.filter(game => game.winning_team_id !== null || game.is_draw);
 
-    setPendingGames(pending.reverse());
-    setCompletedGames(completed.reverse());
+    setPendingGames([...pending].reverse());
+    setCompletedGames([...completed].reverse());
     setScheduledGames(futureGames);
     setLoading(false);
   }, []);
@@ -101,10 +113,16 @@ export default function ResultsPage() {
     setSuccess(null);
     setError(null);
 
-    const updateData = {
-      winning_team_id: result === 'draw' ? null : parseInt(result),
-      is_draw: result === 'draw',
+    const updateData: { winning_team_id: number | null; is_draw: boolean } = {
+      winning_team_id: null,
+      is_draw: false,
     };
+
+    if (result === 'draw') {
+      updateData.is_draw = true;
+    } else {
+      updateData.winning_team_id = parseInt(result, 10);
+    }
 
     const { error: updateError } = await supabase
       .from('games')
@@ -186,51 +204,83 @@ export default function ResultsPage() {
       {success && <p className="bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-300 p-3 rounded-md mb-4">{success}</p>}
       {error && <p className="bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-300 p-3 rounded-md mb-4">{error}</p>}
 
-      {/* Sections */}
-      {[
-        { title: 'Pending Results', games: pendingGames, key: 'pending' },
-        { title: 'Completed Results', games: completedGames, key: 'completed' },
-        { title: 'Upcoming Scheduled Games', games: scheduledGames, key: 'scheduled', icon: <CalendarClock className="w-6 h-6 mr-2 text-blue-500" /> }
-      ].map(({ title, games, key, icon }) => (
-        <div key={key} className="bg-white dark:bg-gray-900 p-6 rounded-lg border border-gray-200 dark:border-gray-800 mb-8">
-          <h2 className="text-xl font-semibold mb-4 flex items-center">
-            {icon}
-            {title}
-          </h2>
-          {loading ? (
-            <p>Loading...</p>
-          ) : games.length === 0 ? (
-            <p className="text-gray-500 dark:text-gray-400">No games found.</p>
-          ) : (
-            <div className="space-y-4">
-              {games.map((game) => (
-                <div key={game.id} className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-md border border-gray-200 dark:border-gray-700">
-                  {key === 'completed' && editingGameId !== game.id ? (
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-bold text-lg">{game.team_a?.name} vs {game.team_b?.name}</p>
-                        <p className="font-semibold text-green-600 dark:text-green-400 mt-1">
-                          Winner: {game.is_draw ? 'Draw' : (game.winning_team_id === game.team_a?.id ? game.team_a.name : game.team_b?.name)}
-                        </p>
-                      </div>
-                      <button onClick={() => handleEditClick(game)} className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600 font-semibold flex items-center">
-                        <Edit className="w-4 h-4 mr-2" />
-                        Edit
-                      </button>
-                    </div>
-                  ) : (
-                    <>
+      {/* Pending Games */}
+      <section className="mb-8 p-6 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg">
+        <h2 className="text-xl font-semibold mb-4">Pending Results</h2>
+        {loading ? <p>Loading...</p> : pendingGames.length === 0 ? (
+          <p className="text-gray-500 dark:text-gray-400">No games awaiting results.</p>
+        ) : (
+          <div className="space-y-4">
+            {pendingGames.map(game => (
+              <div key={game.id} className="p-4 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-md">
+                <p className="font-bold text-lg">{game.team_a?.name} vs {game.team_b?.name}</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{new Date(game.game_date).toLocaleString()}</p>
+                {renderGameControls(game)}
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
+      {/* Completed Games */}
+      <section className="mb-8 p-6 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg">
+        <h2 className="text-xl font-semibold mb-4">Completed Results</h2>
+        {loading ? <p>Loading...</p> : completedGames.length === 0 ? (
+          <p className="text-gray-500 dark:text-gray-400">No results have been entered yet.</p>
+        ) : (
+          <div className="space-y-4">
+            {completedGames.map(game => (
+              <div key={game.id} className="p-4 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-md">
+                {editingGameId === game.id ? (
+                  <>
+                    <p className="font-bold text-lg">{game.team_a?.name} vs {game.team_b?.name}</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">{new Date(game.game_date).toLocaleString()}</p>
+                    {renderGameControls(game)}
+                  </>
+                ) : (
+                  <div className="flex justify-between items-center">
+                    <div>
                       <p className="font-bold text-lg">{game.team_a?.name} vs {game.team_b?.name}</p>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">{new Date(game.game_date).toLocaleString()}</p>
-                      {key !== 'scheduled' && renderGameControls(game)}
-                    </>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      ))}
+                      <p className="text-green-600 dark:text-green-400 font-semibold mt-1">
+                        {game.is_draw ? 'Draw' : `Winner: ${game.winning_team_id === game.team_a?.id ? game.team_a?.name : game.team_b?.name}`}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => handleEditClick(game)}
+                      className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600 font-semibold flex items-center"
+                    >
+                      <Edit className="w-4 h-4 mr-2" />
+                      Edit
+                    </button>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
+      {/* Scheduled Games */}
+      <section className="p-6 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg">
+        <h2 className="text-xl font-semibold mb-4 flex items-center">
+          <CalendarClock className="w-6 h-6 mr-2 text-blue-500" />
+          Upcoming Scheduled Games
+        </h2>
+        {loading ? <p>Loading...</p> : scheduledGames.length === 0 ? (
+          <p className="text-gray-500 dark:text-gray-400">No future games scheduled.</p>
+        ) : (
+          <div className="space-y-4">
+            {scheduledGames.map(game => (
+              <div key={game.id} className="p-4 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-md">
+                <p className="font-bold text-lg">{game.team_a?.name} vs {game.team_b?.name}</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  Scheduled for: {new Date(game.game_date).toLocaleString()}
+                </p>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
     </div>
   );
 }
