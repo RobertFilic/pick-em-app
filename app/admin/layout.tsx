@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Shield, Trophy, Users, Gamepad2, ClipboardList } from 'lucide-react';
+import { Shield, Trophy, Users, Gamepad2, ClipboardList, HelpCircle } from 'lucide-react';
 
 export default function AdminLayout({
   children,
@@ -11,6 +11,7 @@ export default function AdminLayout({
     { name: 'Competitions', href: '/admin/competitions', icon: Trophy },
     { name: 'Teams', href: '/admin/teams', icon: Users },
     { name: 'Games', href: '/admin/games', icon: Gamepad2 },
+    { name: 'Special Events', href: '/admin/special-events', icon: HelpCircle },
     { name: 'Results', href: '/admin/results', icon: ClipboardList },
   ];
 
