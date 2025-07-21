@@ -10,11 +10,12 @@ type Competition = {
   name: string;
 };
 
+// FIXED: The type for 'competitions' is now an array to match Supabase's return type
 type PropPrediction = {
   id: number;
   question: string;
   lock_date: string;
-  competitions: { name: string } | null;
+  competitions: { name: string }[] | null;
 };
 
 export default function SpecialEventsPage() {
@@ -146,7 +147,8 @@ export default function SpecialEventsPage() {
               <div key={event.id} className="grid grid-cols-[1fr_auto] items-center gap-4 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-md border border-gray-200 dark:border-gray-700">
                 <div>
                   <p className="font-semibold">{event.question}</p>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">{event.competitions?.name}</p>
+                  {/* FIXED: Access the competition name from the first element of the array */}
+                  <p className="text-sm text-gray-600 dark:text-gray-400">{event.competitions?.[0]?.name}</p>
                   <p className="text-sm text-gray-500 dark:text-gray-500">Locks on: {new Date(event.lock_date).toLocaleString()}</p>
                 </div>
                 <button 
