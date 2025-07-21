@@ -5,7 +5,6 @@ import { supabase } from '@/lib/supabaseClient';
 import { Gamepad2, PlusCircle, Trash2 } from 'lucide-react';
 
 // --- Type Definitions ---
-// These types define the shape of the data we expect from our database.
 
 type Competition = {
   id: number;
@@ -17,16 +16,24 @@ type Team = {
   name: string;
 };
 
-// This is the main type for displaying a game with all its details.
-// FIXED: The types for joined tables are now correctly defined as arrays
-// to satisfy the Vercel build environment.
+// This type represents the clean, final shape of our game data.
 type GameWithDetails = {
   id: number;
   stage: string | null;
   game_date: string;
-  competitions: { name: string }[] | null;
-  team_a: { name: string }[] | null;
-  team_b: { name: string }[] | null;
+  competitions: { name: string } | null;
+  team_a: { name: string } | null;
+  team_b: { name: string } | null;
+};
+
+// This type represents the raw, potentially inconsistent data from Supabase.
+type RawGameData = {
+  id: number;
+  stage: string | null;
+  game_date: string;
+  competitions: { name: string } | { name: string }[] | null;
+  team_a: { name: string } | { name: string }[] | null;
+  team_b: { name: string } | { name: string }[] | null;
 };
 
 // --- Main Page Component ---
@@ -37,7 +44,6 @@ export default function GamesPage() {
   const [competitions, setCompetitions] = useState<Competition[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
   
-  // Form state for creating a new game
   const [competitionId, setCompetitionId] = useState('');
   const [teamAId, setTeamAId] = useState('');
   const [teamBId, setTeamBId] = useState('');
@@ -65,10 +71,22 @@ export default function GamesPage() {
     if (error) {
       setError(error.message);
       console.error('Error fetching games:', error);
-    } else {
-      console.log('Fetched games data:', data);
-      // The type assertion is necessary to align with our corrected type.
-      setGames(data as GameWithDetails[]);
+    } else if (data) {
+      // This function safely transforms the raw data into our desired shape.
+      const transformData = (gameData: RawGameData): GameWithDetails => ({
+        id: gameData.id,
+        stage: gameData.stage,
+        game_date: gameData.game_date,
+        competitions: Array.isArray(gameData.competitions) ? gameData.competitions[0] : gameData.competitions,
+        team_a: Array.isArray(gameData.team_a) ? gameData.team_a[0] : gameData.team_a,
+        team_b: Array.isArray(gameData.team_b) ? gameData.team_b[0] : gameData.team_b,
+      });
+
+      const validGames = data
+        .map(transformData)
+        .filter(game => game.team_a && game.team_b && game.competitions);
+      
+      setGames(validGames);
     }
   }, []);
 
@@ -84,7 +102,6 @@ export default function GamesPage() {
     else setTeams(data || []);
   }, []);
 
-  // Effect to fetch all necessary data when the component mounts
   useEffect(() => {
     const fetchInitialData = async () => {
       setLoading(true);
@@ -126,7 +143,6 @@ export default function GamesPage() {
     if (insertError) {
       setError(insertError.message);
     } else {
-      // Reset form and refresh the game list
       setCompetitionId('');
       setTeamAId('');
       setTeamBId('');
@@ -156,7 +172,6 @@ export default function GamesPage() {
         <h1 className="text-3xl font-bold">Manage Games</h1>
       </div>
 
-      {/* Form to add a new game */}
       <div className="bg-white dark:bg-gray-900 p-6 rounded-lg border border-gray-200 dark:border-gray-800 mb-8">
         <h2 className="text-xl font-semibold mb-4 flex items-center">
           <PlusCircle className="w-6 h-6 mr-2" />
@@ -201,7 +216,6 @@ export default function GamesPage() {
         </form>
       </div>
 
-      {/* List of existing games */}
       <div className="bg-white dark:bg-gray-900 p-6 rounded-lg border border-gray-200 dark:border-gray-800">
         <h2 className="text-xl font-semibold mb-4">Scheduled Games</h2>
         {loading ? <p>Loading...</p> : (
@@ -210,9 +224,8 @@ export default function GamesPage() {
             {games.map((game) => (
               <div key={game.id} className="grid grid-cols-[1fr_auto] items-center gap-4 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-md border border-gray-200 dark:border-gray-700">
                 <div>
-                  {/* FIXED: Accessing names from the first element of the array */}
-                  <p className="font-bold text-lg">{game.team_a?.[0]?.name || 'N/A'} vs {game.team_b?.[0]?.name || 'N/A'}</p>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">{game.competitions?.[0]?.name} {game.stage ? ` - ${game.stage}` : ''}</p>
+                  <p className="font-bold text-lg">{game.team_a?.name || 'N/A'} vs {game.team_b?.name || 'N/A'}</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">{game.competitions?.name} {game.stage ? ` - ${game.stage}` : ''}</p>
                   <p className="text-sm text-gray-500 dark:text-gray-500">{new Date(game.game_date).toLocaleString()}</p>
                 </div>
                 <button 
