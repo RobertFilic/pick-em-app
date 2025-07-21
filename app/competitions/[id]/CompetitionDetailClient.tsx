@@ -155,7 +155,6 @@ export default function CompetitionDetailClient({ id }: { id: string }) {
         return;
     }
 
-    // FIXED: Split picks into two arrays for separate upsert operations
     const gamePicks = allPicks.filter(p => p.game_id !== null);
     const propPicks = allPicks.filter(p => p.prop_prediction_id !== null);
 
@@ -177,8 +176,12 @@ export default function CompetitionDetailClient({ id }: { id: string }) {
       setSuccess("Your picks have been saved successfully!");
       setTimeout(() => setSuccess(null), 3000);
 
-    } catch (upsertError: any) {
-      setError(upsertError.message);
+    } catch (upsertError) { // FIXED: Removed the explicit 'any' type
+      if (upsertError instanceof Error) {
+        setError(upsertError.message);
+      } else {
+        setError("An unknown error occurred while saving picks.");
+      }
     } finally {
       setSubmitting(false);
     }
