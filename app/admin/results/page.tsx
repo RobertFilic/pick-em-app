@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { ClipboardList, CheckCircle, Edit, XCircle, CalendarClock } from 'lucide-react';
 
 // Define a more detailed type for a game that includes team IDs for processing
+// FIXED: The types for joined tables are now correctly defined as arrays.
 type GameForResult = {
   id: number;
   stage: string | null;
@@ -48,9 +49,8 @@ export default function ResultsPage() {
       const now = new Date();
       // FIXED: Added a more robust filter to ensure team arrays exist and are not empty.
       const validGames = data.filter(game => 
-        game.team_a && game.team_a.length > 0 &&
-        game.team_b && game.team_b.length > 0 &&
-        game.competitions && game.competitions.length > 0
+        game.team_a && Array.isArray(game.team_a) && game.team_a.length > 0 &&
+        game.team_b && Array.isArray(game.team_b) && game.team_b.length > 0
       );
 
       const pastGames = validGames.filter(game => new Date(game.game_date) < now);
@@ -231,7 +231,7 @@ export default function ResultsPage() {
         {loading ? <p>Loading...</p> : scheduledGames.length === 0 ? (
             <p className="text-gray-500 dark:text-gray-400">No games are scheduled for the future.</p>
         ) : (
-            <div className="space-y-4">
+          <div className="space-y-4">
                 {scheduledGames.map((game) => (
                     <div key={game.id} className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-md border border-gray-200 dark:border-gray-700">
                         <div className="flex items-center justify-between">
