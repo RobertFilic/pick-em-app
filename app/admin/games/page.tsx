@@ -18,14 +18,14 @@ type Team = {
 };
 
 // This is the main type for displaying a game with all its details.
-// It correctly defines the shape of the joined data from Supabase.
+// FIXED: The types for joined tables are now correctly defined as arrays.
 type GameWithDetails = {
   id: number;
   stage: string | null;
   game_date: string;
-  competitions: { name: string } | null;
-  team_a: { name: string } | null;
-  team_b: { name: string } | null;
+  competitions: { name: string }[] | null;
+  team_a: { name: string }[] | null;
+  team_b: { name: string }[] | null;
 };
 
 // --- Main Page Component ---
@@ -49,8 +49,6 @@ export default function GamesPage() {
   // --- Data Fetching ---
 
   const fetchGames = useCallback(async () => {
-    // This query is structured to be robust and clear. It renames the foreign
-    // key columns to fetch the related team and competition names.
     const { data, error } = await supabase
       .from('games')
       .select(`
@@ -68,7 +66,11 @@ export default function GamesPage() {
       console.error('Error fetching games:', error);
     } else {
       // Filter out any games that might have broken relationships (e.g., a deleted team)
-      const validGames = data.filter(game => game.team_a && game.team_b && game.competitions);
+      const validGames = data.filter(game => 
+        game.team_a && Array.isArray(game.team_a) &&
+        game.team_b && Array.isArray(game.team_b) &&
+        game.competitions && Array.isArray(game.competitions)
+      );
       setGames(validGames as GameWithDetails[]);
     }
   }, []);
@@ -211,8 +213,9 @@ export default function GamesPage() {
             {games.map((game) => (
               <div key={game.id} className="grid grid-cols-[1fr_auto] items-center gap-4 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-md border border-gray-200 dark:border-gray-700">
                 <div>
-                  <p className="font-bold text-lg">{game.team_a?.name || 'N/A'} vs {game.team_b?.name || 'N/A'}</p>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">{game.competitions?.name} {game.stage ? ` - ${game.stage}` : ''}</p>
+                  {/* FIXED: Access names from the first element of the array */}
+                  <p className="font-bold text-lg">{game.team_a?.[0]?.name || 'N/A'} vs {game.team_b?.[0]?.name || 'N/A'}</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">{game.competitions?.[0]?.name} {game.stage ? ` - ${game.stage}` : ''}</p>
                   <p className="text-sm text-gray-500 dark:text-gray-500">{new Date(game.game_date).toLocaleString()}</p>
                 </div>
                 <button 
