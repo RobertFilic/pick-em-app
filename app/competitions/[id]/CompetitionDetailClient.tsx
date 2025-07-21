@@ -245,7 +245,13 @@ export default function CompetitionDetailClient({ id }: { id: string }) {
                   return (
                     <div key={`prop_${prop.id}`} className={`bg-white dark:bg-gray-900 p-4 rounded-lg border-2 border-dashed border-blue-300 dark:border-blue-800 ${isLocked(prop.lock_date) ? 'opacity-60' : ''}`}>
                       <div className="flex justify-between items-center mb-3">
-                        <p className="font-semibold flex items-center"><HelpCircle className="w-5 h-5 mr-2 text-blue-500" />{prop.question}</p>
+                        <div className="relative group flex items-center">
+                          <HelpCircle className="w-5 h-5 mr-2 text-blue-500" />
+                          <p className="font-semibold">{prop.question}</p>
+                          <div className="absolute bottom-full mb-2 w-max px-3 py-1.5 text-sm text-white bg-gray-800 rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                            A special prediction event, not a standard game.
+                          </div>
+                        </div>
                         <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
                           <Clock className="w-4 h-4 mr-1.5"/>
                           {new Date(prop.lock_date).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}
