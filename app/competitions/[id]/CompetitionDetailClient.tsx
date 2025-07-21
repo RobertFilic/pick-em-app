@@ -138,7 +138,7 @@ export default function CompetitionDetailClient({ id }: { id: string }) {
     setError(null);
     setSuccess(null);
 
-    const picksToUpsert = Object.entries(picks).map(([key, pick]) => {
+    const allPicks = Object.entries(picks).map(([key, pick]) => {
       const [type, id] = key.split('_');
       return {
         user_id: userId,
@@ -149,23 +149,39 @@ export default function CompetitionDetailClient({ id }: { id: string }) {
       };
     });
 
-    if (picksToUpsert.length === 0) {
+    if (allPicks.length === 0) {
         setError("You haven't made any picks.");
         setSubmitting(false);
         return;
     }
 
-    const { error: upsertError } = await supabase.from('user_picks').upsert(picksToUpsert, {
-      onConflict: 'user_id, game_id, prop_prediction_id',
-    });
+    // FIXED: Split picks into two arrays for separate upsert operations
+    const gamePicks = allPicks.filter(p => p.game_id !== null);
+    const propPicks = allPicks.filter(p => p.prop_prediction_id !== null);
 
-    if (upsertError) {
-      setError(upsertError.message);
-    } else {
+    try {
+      if (gamePicks.length > 0) {
+        const { error: gameUpsertError } = await supabase.from('user_picks').upsert(gamePicks, {
+          onConflict: 'user_id, game_id',
+        });
+        if (gameUpsertError) throw gameUpsertError;
+      }
+
+      if (propPicks.length > 0) {
+        const { error: propUpsertError } = await supabase.from('user_picks').upsert(propPicks, {
+          onConflict: 'user_id, prop_prediction_id',
+        });
+        if (propUpsertError) throw propUpsertError;
+      }
+
       setSuccess("Your picks have been saved successfully!");
       setTimeout(() => setSuccess(null), 3000);
+
+    } catch (upsertError: any) {
+      setError(upsertError.message);
+    } finally {
+      setSubmitting(false);
     }
-    setSubmitting(false);
   };
 
   if (loading) { return <div className="text-center p-10">Loading competition...</div>; }
