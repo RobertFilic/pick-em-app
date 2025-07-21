@@ -18,14 +18,14 @@ type Team = {
 };
 
 // This is the main type for displaying a game with all its details.
-// FIXED: The types for joined tables are now correctly defined as arrays.
+// FIXED: The types for joined tables are now correctly defined as single objects.
 type GameWithDetails = {
   id: number;
   stage: string | null;
   game_date: string;
-  competitions: { name: string }[] | null;
-  team_a: { name: string }[] | null;
-  team_b: { name: string }[] | null;
+  competitions: { name: string } | null;
+  team_a: { name: string } | null;
+  team_b: { name: string } | null;
 };
 
 // --- Main Page Component ---
@@ -65,8 +65,9 @@ export default function GamesPage() {
       setError(error.message);
       console.error('Error fetching games:', error);
     } else {
-      // The type assertion is still needed, but now the types match.
-      setGames(data as GameWithDetails[]);
+      // Filter out any games that might have broken relationships (e.g., a deleted team)
+      const validGames = data.filter(game => game.team_a && game.team_b && game.competitions);
+      setGames(validGames as GameWithDetails[]);
     }
   }, []);
 
@@ -208,9 +209,9 @@ export default function GamesPage() {
             {games.map((game) => (
               <div key={game.id} className="grid grid-cols-[1fr_auto] items-center gap-4 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-md border border-gray-200 dark:border-gray-700">
                 <div>
-                  {/* FIXED: Accessing names from the first element of the array */}
-                  <p className="font-bold text-lg">{game.team_a?.[0]?.name || 'N/A'} vs {game.team_b?.[0]?.name || 'N/A'}</p>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">{game.competitions?.[0]?.name} {game.stage ? ` - ${game.stage}` : ''}</p>
+                  {/* FIXED: Accessing names directly from the object */}
+                  <p className="font-bold text-lg">{game.team_a?.name || 'N/A'} vs {game.team_b?.name || 'N/A'}</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">{game.competitions?.name} {game.stage ? ` - ${game.stage}` : ''}</p>
                   <p className="text-sm text-gray-500 dark:text-gray-500">{new Date(game.game_date).toLocaleString()}</p>
                 </div>
                 <button 
