@@ -5,7 +5,8 @@ import { supabase } from '@/lib/supabaseClient';
 import { ClipboardList, CheckCircle, Edit, XCircle, CalendarClock } from 'lucide-react';
 
 // --- Type Definitions ---
-// This type definition is now the single source of truth.
+
+// This type represents the clean, final shape of our game data.
 type GameForResult = {
   id: number;
   stage: string | null;
@@ -16,6 +17,19 @@ type GameForResult = {
   winning_team_id: number | null;
   is_draw: boolean;
 };
+
+// This type represents the raw data shape from Supabase, which can be inconsistent.
+type RawGameData = {
+  id: number;
+  stage: string | null;
+  game_date: string;
+  winning_team_id: number | null;
+  is_draw: boolean;
+  competitions: { name: string } | { name: string }[] | null;
+  team_a: { id: number; name: string } | { id: number; name: string }[] | null;
+  team_b: { id: number; name: string } | { id: number; name: string }[] | null;
+};
+
 
 // --- Main Page Component ---
 export default function ResultsPage() {
@@ -51,14 +65,13 @@ export default function ResultsPage() {
     } else if (data) {
       const now = new Date();
       
-      // This function safely transforms the data from Supabase into the GameForResult type.
-      const transformData = (gameData: any): GameForResult => ({
+      // FIXED: This function now uses a specific type instead of 'any'.
+      const transformData = (gameData: RawGameData): GameForResult => ({
         id: gameData.id,
         stage: gameData.stage,
         game_date: gameData.game_date,
         winning_team_id: gameData.winning_team_id,
         is_draw: gameData.is_draw,
-        // Safely handle cases where joined data might be an array or a single object
         competitions: Array.isArray(gameData.competitions) ? gameData.competitions[0] : gameData.competitions,
         team_a: Array.isArray(gameData.team_a) ? gameData.team_a[0] : gameData.team_a,
         team_b: Array.isArray(gameData.team_b) ? gameData.team_b[0] : gameData.team_b,
@@ -74,7 +87,6 @@ export default function ResultsPage() {
       const pending = pastGames.filter(game => game.winning_team_id === null && !game.is_draw);
       const completed = pastGames.filter(game => game.winning_team_id !== null || game.is_draw);
       
-      // FIXED: Removed the problematic type assertions. The data is now correctly typed.
       setPendingGames(pending.reverse());
       setCompletedGames(completed.reverse());
       setScheduledGames(futureGames);
