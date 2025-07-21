@@ -50,14 +50,19 @@ export default function ResultsPage() {
       setError(fetchError.message);
       console.error('Error fetching games:', fetchError);
     } else if (data) {
+      // ADDED: Log the raw data from Supabase
+      console.log("Raw data from Supabase:", data);
+
       const now = new Date();
       
-      // FIXED: This robust filter ensures that games with missing related data are excluded.
       const validGames = data.filter(game => 
         game.team_a && Array.isArray(game.team_a) && game.team_a.length > 0 &&
         game.team_b && Array.isArray(game.team_b) && game.team_b.length > 0 &&
         game.competitions && Array.isArray(game.competitions) && game.competitions.length > 0
       );
+
+      // ADDED: Log the data after filtering for valid games
+      console.log("Valid games after filtering:", validGames);
 
       const pastGames = validGames.filter(game => new Date(game.game_date) < now);
       const futureGames = validGames.filter(game => new Date(game.game_date) >= now);
@@ -65,6 +70,11 @@ export default function ResultsPage() {
       const pending = pastGames.filter(game => game.winning_team_id === null && !game.is_draw);
       const completed = pastGames.filter(game => game.winning_team_id !== null || game.is_draw);
       
+      // ADDED: Log the categorized lists
+      console.log("Pending Games:", pending);
+      console.log("Completed Games:", completed);
+      console.log("Scheduled Games:", futureGames);
+
       setPendingGames(pending.reverse() as GameForResult[]);
       setCompletedGames(completed.reverse() as GameForResult[]);
       setScheduledGames(futureGames as GameForResult[]);
