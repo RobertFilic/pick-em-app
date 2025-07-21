@@ -1,9 +1,3 @@
-/*
-================================================================================
-File: app/_admin/results/page.tsx (Build Fix)
-================================================================================
-*/
-
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
@@ -11,14 +5,13 @@ import { supabase } from '@/lib/supabaseClient';
 import { ClipboardList, CheckCircle, Edit, XCircle, CalendarClock } from 'lucide-react';
 
 // Define a more detailed type for a game that includes team IDs for processing
-// FIXED: The types for 'team_a' and 'team_b' are now arrays to match Supabase's return type
 type GameForResult = {
   id: number;
   stage: string | null;
   game_date: string;
-  competitions: { name: string }[] | null;
-  team_a: { id: number; name: string }[] | null;
-  team_b: { id: number; name: string }[] | null;
+  competitions: { name: string } | null;
+  team_a: { id: number; name: string } | null;
+  team_b: { id: number; name: string } | null;
   winning_team_id: number | null;
   is_draw: boolean;
 };
@@ -38,13 +31,14 @@ export default function ResultsPage() {
     setLoading(true);
     setError(null);
     
+    // FIXED: Using a more robust query syntax that handles joins gracefully
     const { data, error: fetchError } = await supabase
       .from('games')
       .select(`
         id, stage, game_date, winning_team_id, is_draw,
         competitions ( name ),
-        team_a:teams!games_team_a_id_fkey ( id, name ),
-        team_b:teams!games_team_b_id_fkey ( id, name )
+        team_a: team_a_id ( id, name ),
+        team_b: team_b_id ( id, name )
       `)
       .order('game_date', { ascending: true });
 
@@ -53,8 +47,11 @@ export default function ResultsPage() {
       console.error('Error fetching games:', fetchError);
     } else if (data) {
       const now = new Date();
-      const pastGames = data.filter(game => new Date(game.game_date) < now);
-      const futureGames = data.filter(game => new Date(game.game_date) >= now);
+      // Filter out any games that are missing team data to prevent crashes
+      const validGames = data.filter(game => game.team_a && game.team_b);
+
+      const pastGames = validGames.filter(game => new Date(game.game_date) < now);
+      const futureGames = validGames.filter(game => new Date(game.game_date) >= now);
 
       const pending = pastGames.filter(game => game.winning_team_id === null && !game.is_draw);
       const completed = pastGames.filter(game => game.winning_team_id !== null || game.is_draw);
@@ -122,10 +119,10 @@ export default function ResultsPage() {
     <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mt-3">
         <div className="flex-grow grid grid-cols-1 sm:grid-cols-3 gap-2 w-full">
             <button 
-                onClick={() => handleResultChange(game.id, game.team_a![0]!.id.toString())}
-                className={`p-2 rounded-md text-sm font-semibold border-2 transition-all ${results[game.id] === game.team_a![0]!.id.toString() ? 'bg-blue-600 text-white border-blue-600' : 'bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 hover:border-blue-500'}`}
+                onClick={() => handleResultChange(game.id, game.team_a!.id.toString())}
+                className={`p-2 rounded-md text-sm font-semibold border-2 transition-all ${results[game.id] === game.team_a!.id.toString() ? 'bg-blue-600 text-white border-blue-600' : 'bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 hover:border-blue-500'}`}
             >
-                {game.team_a?.[0]?.name} Wins
+                {game.team_a?.name} Wins
             </button>
             <button 
                 onClick={() => handleResultChange(game.id, 'draw')}
@@ -134,10 +131,10 @@ export default function ResultsPage() {
                 Draw
             </button>
             <button 
-                onClick={() => handleResultChange(game.id, game.team_b![0]!.id.toString())}
-                className={`p-2 rounded-md text-sm font-semibold border-2 transition-all ${results[game.id] === game.team_b![0]!.id.toString() ? 'bg-blue-600 text-white border-blue-600' : 'bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 hover:border-blue-500'}`}
+                onClick={() => handleResultChange(game.id, game.team_b!.id.toString())}
+                className={`p-2 rounded-md text-sm font-semibold border-2 transition-all ${results[game.id] === game.team_b!.id.toString() ? 'bg-blue-600 text-white border-blue-600' : 'bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 hover:border-blue-500'}`}
             >
-                {game.team_b?.[0]?.name} Wins
+                {game.team_b?.name} Wins
             </button>
         </div>
         <div className="flex w-full sm:w-auto space-x-2">
@@ -178,7 +175,7 @@ export default function ResultsPage() {
           <div className="space-y-4">
             {pendingGames.map((game) => (
               <div key={game.id} className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-md border border-gray-200 dark:border-gray-700">
-                <p className="font-bold text-lg">{game.team_a?.[0]?.name} vs {game.team_b?.[0]?.name}</p>
+                <p className="font-bold text-lg">{game.team_a?.name} vs {game.team_b?.name}</p>
                 <p className="text-sm text-gray-500 dark:text-gray-400">{new Date(game.game_date).toLocaleString()}</p>
                 {renderGameControls(game)}
               </div>
@@ -198,16 +195,16 @@ export default function ResultsPage() {
               <div key={game.id} className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-md border border-gray-200 dark:border-gray-700">
                  {editingGameId === game.id ? (
                     <>
-                        <p className="font-bold text-lg">{game.team_a?.[0]?.name} vs {game.team_b?.[0]?.name}</p>
+                        <p className="font-bold text-lg">{game.team_a?.name} vs {game.team_b?.name}</p>
                         <p className="text-sm text-gray-500 dark:text-gray-400">{new Date(game.game_date).toLocaleString()}</p>
                         {renderGameControls(game)}
                     </>
                  ) : (
                     <div className="flex items-center justify-between">
                         <div>
-                            <p className="font-bold text-lg">{game.team_a?.[0]?.name} vs {game.team_b?.[0]?.name}</p>
+                            <p className="font-bold text-lg">{game.team_a?.name} vs {game.team_b?.name}</p>
                             <p className="font-semibold text-green-600 dark:text-green-400 mt-1">
-                                Winner: {game.is_draw ? 'Draw' : (game.winning_team_id === game.team_a?.[0]?.id ? game.team_a[0].name : game.team_b?.[0]?.name)}
+                                Winner: {game.is_draw ? 'Draw' : (game.winning_team_id === game.team_a?.id ? game.team_a.name : game.team_b?.name)}
                             </p>
                         </div>
                         <button onClick={() => handleEditClick(game)} className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600 font-semibold flex items-center">
@@ -236,7 +233,7 @@ export default function ResultsPage() {
                     <div key={game.id} className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-md border border-gray-200 dark:border-gray-700">
                         <div className="flex items-center justify-between">
                             <div>
-                                <p className="font-bold text-lg">{game.team_a?.[0]?.name} vs {game.team_b?.[0]?.name}</p>
+                                <p className="font-bold text-lg">{game.team_a?.name} vs {game.team_b?.name}</p>
                                 <p className="text-sm text-gray-500 dark:text-gray-400">
                                     Scheduled for: {new Date(game.game_date).toLocaleString()}
                                 </p>
