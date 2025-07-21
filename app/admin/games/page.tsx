@@ -16,7 +16,6 @@ type Team = {
 };
 
 // This type is for displaying games, joining data from other tables
-// FIXED: Types for joined tables are now single objects, not arrays.
 type GameWithDetails = {
   id: number;
   stage: string | null;
@@ -55,17 +54,17 @@ export default function GamesPage() {
   }, []);
 
   const fetchGames = async () => {
-    // FIXED: Updated the query to use an inner join hint (!inner) which ensures
-    // that related data is returned as a single object, not an array.
+    // FIXED: Simplified the query to avoid the parsing error on Vercel.
+    // This syntax explicitly renames the foreign key columns to get the team names.
     const { data, error } = await supabase
       .from('games')
       .select(`
         id,
         stage,
         game_date,
-        competitions!inner ( name ),
-        team_a:teams!inner!games_team_a_id_fkey ( name ),
-        team_b:teams!inner!games_team_b_id_fkey ( name )
+        competitions ( name ),
+        team_a: team_a_id ( name ),
+        team_b: team_b_id ( name )
       `)
       .order('game_date', { ascending: false });
 
@@ -193,7 +192,6 @@ export default function GamesPage() {
             {games.map((game) => (
               <div key={game.id} className="grid grid-cols-[1fr_auto] items-center gap-4 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-md border border-gray-200 dark:border-gray-700">
                 <div>
-                  {/* FIXED: Access names directly from the object, not an array */}
                   <p className="font-bold text-lg">{game.team_a?.name || 'N/A'} vs {game.team_b?.name || 'N/A'}</p>
                   <p className="text-sm text-gray-600 dark:text-gray-400">{game.competitions?.name} {game.stage ? ` - ${game.stage}` : ''}</p>
                   <p className="text-sm text-gray-500 dark:text-gray-500">{new Date(game.game_date).toLocaleString()}</p>
