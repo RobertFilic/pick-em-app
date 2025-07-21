@@ -62,7 +62,7 @@ export default function GamesPage() {
         id,
         stage,
         game_date,
-        competitions ( name ),
+        competitions: competition_id ( name ),
         team_a: team_a_id ( name ),
         team_b: team_b_id ( name )
       `)
