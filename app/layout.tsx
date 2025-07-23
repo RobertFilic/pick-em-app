@@ -15,10 +15,11 @@ const inter = Inter({
   variable: '--font-inter',
 });
 
+// SEO OPTIMIZED: Merged your original metadata with the SEO-focused content
 export const metadata: Metadata = {
-  title: "Pick'em - Sports Predictions Made Simple",
-  description: 'The most intuitive sports prediction platform. Make picks, compete with friends, and climb the leaderboards.',
-  keywords: 'sports predictions, pick em, fantasy sports, betting',
+  title: "Pick'em App | EuroBasket 2025 Challenge",
+  description: 'Join the ultimate EuroBasket 2025 pick em challenge. Compete with friends, track your score on the live leaderboard, and prove your basketball knowledge.',
+  keywords: 'EuroBasket 2025, Pick em, Basketball Prediction Game, Office Pool, Sports Betting Game',
   authors: [{ name: "Pick'em Team" }],
   viewport: 'width=device-width, initial-scale=1, maximum-scale=1',
   themeColor: [
@@ -32,6 +33,24 @@ interface RootLayoutProps {
 }
 
 export default function RootLayout({ children }: RootLayoutProps) {
+  // SEO OPTIMIZED: Added JSON-LD structured data for the SportsEvent
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'SportsEvent',
+    name: "FIBA EuroBasket 2025 Pick'em Challenge",
+    startDate: '2025-08-27',
+    endDate: '2025-09-14',
+    description: 'A friendly prediction game for the FIBA EuroBasket 2025 tournament.',
+    location: {
+      '@type': 'Place',
+      name: 'Cyprus, Finland, Latvia, Poland',
+    },
+    organizer: {
+      '@type': 'Organization',
+      name: "Pick'em App",
+    },
+  };
+
   return (
     <html lang="en" suppressHydrationWarning>
       <body
@@ -48,6 +67,12 @@ export default function RootLayout({ children }: RootLayoutProps) {
           min-h-screen relative
         `}
       >
+        {/* SEO OPTIMIZED: Added script tag for JSON-LD */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
+        
         {/* Background Glow Effects */}
         <div className="fixed inset-0 -z-10 overflow-hidden pointer-events-none">
           <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-violet-400/20 to-purple-600/20 rounded-full blur-3xl animate-pulse" />
@@ -60,7 +85,7 @@ export default function RootLayout({ children }: RootLayoutProps) {
         </div>
 
         {/* Main Content */}
-        <main className="relative">
+        <main id="main-content" className="relative">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="py-8 sm:py-12 lg:py-16">
               {children}
