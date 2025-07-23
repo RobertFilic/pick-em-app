@@ -54,7 +54,7 @@ export default function LandingPage() {
           className="max-w-4xl mx-auto"
         >
           <div className="inline-block bg-yellow-200 dark:bg-yellow-500/20 text-yellow-800 dark:text-yellow-400 px-4 py-2 rounded-full text-sm font-semibold mb-6 tracking-wide uppercase">
-            Official EuroBasket 2025 Challenge
+            Including EuroBasket 2025 Challenge
           </div>
           <h1 className="text-5xl sm:text-7xl font-extrabold tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-yellow-500 to-orange-600 dark:from-yellow-400 dark:to-orange-400 drop-shadow-xl">
             WHO&apos;S GOT NEXT?
