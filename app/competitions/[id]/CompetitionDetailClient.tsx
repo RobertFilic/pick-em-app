@@ -2,11 +2,12 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
-import { Trophy, Clock, Calendar, CheckCircle, BarChart2, Info, HelpCircle } from 'lucide-react';
+import { Trophy, Clock, Calendar, CheckCircle, BarChart2, Info, HelpCircle, XCircle } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 
-// Define the types for our data
+// --- Type Definitions ---
+
 type Competition = {
   id: number;
   name: string;
@@ -28,23 +29,25 @@ type Game = {
   group: string | null;
   team_a: Team | null;
   team_b: Team | null;
+  winning_team_id: number | null;
+  is_draw: boolean;
 };
 
 type PropPrediction = {
   id: number;
   question: string;
   lock_date: string;
+  correct_answer: string | null;
 };
 
-// A new union type to handle both games and props in one list
 type Event = (Game & { type: 'game' }) | (PropPrediction & { type: 'prop' });
 
+// --- Main Page Component ---
 
-// This component receives the competition ID as a simple prop
 export default function CompetitionDetailClient({ id }: { id: string }) {
   const [competition, setCompetition] = useState<Competition | null>(null);
   const [groupedEvents, setGroupedEvents] = useState<{ [key: string]: Event[] }>({});
-  const [picks, setPicks] = useState<{ [key: string]: string }>({}); // Key can be game_id or prop_id
+  const [picks, setPicks] = useState<{ [key: string]: string }>({});
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -87,14 +90,12 @@ export default function CompetitionDetailClient({ id }: { id: string }) {
 
       const propsWithType: Event[] = propPredictionsRes.data.map(p => ({ ...p, type: 'prop' }));
 
-      // Combine games and props into a single array and sort by date
       const allEvents = [...gamesWithGroups, ...propsWithType].sort((a, b) => {
         const dateA = new Date(a.type === 'game' ? a.game_date : a.lock_date);
         const dateB = new Date(b.type === 'game' ? b.game_date : b.lock_date);
         return dateA.getTime() - dateB.getTime();
       });
 
-      // Group all events by date
       const eventsByDate = allEvents.reduce((acc, event) => {
         const dateStr = event.type === 'game' ? event.game_date : event.lock_date;
         const date = new Date(dateStr).toLocaleDateString(undefined, {
@@ -242,8 +243,12 @@ export default function CompetitionDetailClient({ id }: { id: string }) {
               {eventsOnDate.map(event => {
                 if (event.type === 'prop') {
                   const prop = event;
+                  const userPick = picks[`prop_${prop.id}`];
+                  const hasResult = prop.correct_answer !== null;
+                  const isCorrect = hasResult && userPick === prop.correct_answer;
+                  
                   return (
-                    <div key={`prop_${prop.id}`} className={`bg-white dark:bg-gray-900 p-4 rounded-lg border-2 border-dashed border-blue-300 dark:border-blue-800 ${isLocked(prop.lock_date) ? 'opacity-60' : ''}`}>
+                    <div key={`prop_${prop.id}`} className={`bg-white dark:bg-gray-900 p-4 rounded-lg border-2 ${hasResult ? 'border-gray-300 dark:border-gray-700' : 'border-dashed border-blue-300 dark:border-blue-800'} ${isLocked(prop.lock_date) ? 'opacity-70' : ''}`}>
                       <div className="flex justify-between items-center mb-3">
                         <div className="relative group flex items-center">
                           <HelpCircle className="w-5 h-5 mr-2 text-blue-500" />
@@ -261,27 +266,34 @@ export default function CompetitionDetailClient({ id }: { id: string }) {
                       <div className="flex items-center space-x-2">
                           <button 
                               disabled={isLocked(prop.lock_date)}
+                              className={`relative w-full p-2 rounded-md border-2 font-semibold transition-all ${userPick === 'Yes' ? 'bg-blue-600 text-white border-blue-600' : 'bg-gray-50 dark:bg-gray-800 hover:border-blue-500'}`}
                               onClick={() => handlePickChange('prop', prop.id, 'Yes')}
-                              className={`w-full p-2 rounded-md border-2 font-semibold transition-all ${picks[`prop_${prop.id}`] === 'Yes' ? 'bg-blue-600 text-white border-blue-600' : 'bg-gray-50 dark:bg-gray-800 hover:border-blue-500'}`}
                           >
                               Yes
+                              {hasResult && userPick === 'Yes' && (isCorrect ? <span className="absolute top-1 right-1 text-xs bg-green-500 text-white rounded-full px-2 py-0.5">+1 Point</span> : <span className="absolute top-1 right-1 text-xs bg-red-500 text-white rounded-full px-2 py-0.5">Incorrect</span>)}
                           </button>
                           <button 
                               disabled={isLocked(prop.lock_date)}
                               onClick={() => handlePickChange('prop', prop.id, 'No')}
-                              className={`w-full p-2 rounded-md border-2 font-semibold transition-all ${picks[`prop_${prop.id}`] === 'No' ? 'bg-blue-600 text-white border-blue-600' : 'bg-gray-50 dark:bg-gray-800 hover:border-blue-500'}`}
+                              className={`relative w-full p-2 rounded-md border-2 font-semibold transition-all ${userPick === 'No' ? 'bg-blue-600 text-white border-blue-600' : 'bg-gray-50 dark:bg-gray-800 hover:border-blue-500'}`}
                           >
                               No
+                              {hasResult && userPick === 'No' && (isCorrect ? <span className="absolute top-1 right-1 text-xs bg-green-500 text-white rounded-full px-2 py-0.5">+1 Point</span> : <span className="absolute top-1 right-1 text-xs bg-red-500 text-white rounded-full px-2 py-0.5">Incorrect</span>)}
                           </button>
                       </div>
-                      <p className="text-xs text-gray-400 mt-2 text-center">A correct answer is worth 1 point.</p>
+                      {hasResult && <p className="text-xs text-gray-400 mt-2 text-center">Correct Answer: {prop.correct_answer}</p>}
                     </div>
                   )
                 }
                 
                 const game = event;
+                const userPick = picks[`game_${game.id}`];
+                const hasResult = game.winning_team_id !== null || game.is_draw;
+                const correctAnswer = game.is_draw ? 'draw' : game.winning_team_id?.toString();
+                const isCorrect = hasResult && userPick === correctAnswer;
+
                 return (
-                  <div key={`game_${game.id}`} className={`bg-white dark:bg-gray-900 p-4 rounded-lg border border-gray-200 dark:border-gray-800 ${isLocked(game.game_date) ? 'opacity-60' : ''}`}>
+                  <div key={`game_${game.id}`} className={`bg-white dark:bg-gray-900 p-4 rounded-lg border ${hasResult ? 'border-gray-300 dark:border-gray-700' : 'border-gray-200 dark:border-gray-800'} ${isLocked(game.game_date) ? 'opacity-70' : ''}`}>
                     <div className="flex justify-between items-center mb-3">
                       <p className="text-sm font-semibold text-gray-500 dark:text-gray-400">
                         {game.stage} {game.group ? `- ${game.group}` : ''}
@@ -296,17 +308,10 @@ export default function CompetitionDetailClient({ id }: { id: string }) {
                       <button 
                         disabled={isLocked(game.game_date)}
                         onClick={() => handlePickChange('game', game.id, game.team_a!.id.toString())}
-                        className={`flex flex-col items-center justify-center p-3 rounded-md border-2 transition-all ${picks[`game_${game.id}`] === game.team_a!.id.toString() ? 'bg-blue-600 text-white border-blue-600' : 'bg-gray-50 dark:bg-gray-800 hover:border-blue-500'}`}
+                        className={`relative flex flex-col items-center justify-center p-3 rounded-md border-2 transition-all ${userPick === game.team_a!.id.toString() ? 'bg-blue-600 text-white border-blue-600' : 'bg-gray-50 dark:bg-gray-800 hover:border-blue-500'}`}
                       >
-                        {game.team_a?.logo_url && (
-                          <Image 
-                            src={game.team_a.logo_url} 
-                            alt={`${game.team_a.name} logo`} 
-                            width={40}
-                            height={40}
-                            className="w-10 h-10 rounded-full mb-2 object-cover"
-                          />
-                        )}
+                        {hasResult && userPick === game.team_a!.id.toString() && (isCorrect ? <span className="absolute top-1 right-1 text-xs bg-green-500 text-white rounded-full px-2 py-0.5">+1 Point</span> : <span className="absolute top-1 right-1 text-xs bg-red-500 text-white rounded-full px-2 py-0.5">Incorrect</span>)}
+                        {game.team_a?.logo_url && <Image src={game.team_a.logo_url} alt={`${game.team_a.name} logo`} width={40} height={40} className="w-10 h-10 rounded-full mb-2 object-cover"/>}
                         <span className="font-semibold text-center">{game.team_a?.name}</span>
                       </button>
                       
@@ -314,8 +319,9 @@ export default function CompetitionDetailClient({ id }: { id: string }) {
                         <button 
                           disabled={isLocked(game.game_date)}
                           onClick={() => handlePickChange('game', game.id, 'draw')}
-                          className={`flex flex-col items-center justify-center p-3 rounded-md border-2 h-full transition-all ${picks[`game_${game.id}`] === 'draw' ? 'bg-blue-600 text-white border-blue-600' : 'bg-gray-50 dark:bg-gray-800 hover:border-blue-500'}`}
+                          className={`relative flex flex-col items-center justify-center p-3 rounded-md border-2 h-full transition-all ${userPick === 'draw' ? 'bg-blue-600 text-white border-blue-600' : 'bg-gray-50 dark:bg-gray-800 hover:border-blue-500'}`}
                         >
+                          {hasResult && userPick === 'draw' && (isCorrect ? <span className="absolute top-1 right-1 text-xs bg-green-500 text-white rounded-full px-2 py-0.5">+1 Point</span> : <span className="absolute top-1 right-1 text-xs bg-red-500 text-white rounded-full px-2 py-0.5">Incorrect</span>)}
                           <span className="font-bold text-lg">DRAW</span>
                         </button>
                       )}
@@ -323,20 +329,14 @@ export default function CompetitionDetailClient({ id }: { id: string }) {
                       <button 
                         disabled={isLocked(game.game_date)}
                         onClick={() => handlePickChange('game', game.id, game.team_b!.id.toString())}
-                        className={`flex flex-col items-center justify-center p-3 rounded-md border-2 transition-all ${picks[`game_${game.id}`] === game.team_b!.id.toString() ? 'bg-blue-600 text-white border-blue-600' : 'bg-gray-50 dark:bg-gray-800 hover:border-blue-500'}`}
+                        className={`relative flex flex-col items-center justify-center p-3 rounded-md border-2 transition-all ${userPick === game.team_b!.id.toString() ? 'bg-blue-600 text-white border-blue-600' : 'bg-gray-50 dark:bg-gray-800 hover:border-blue-500'}`}
                       >
-                        {game.team_b?.logo_url && (
-                          <Image 
-                            src={game.team_b.logo_url} 
-                            alt={`${game.team_b.name} logo`} 
-                            width={40}
-                            height={40}
-                            className="w-10 h-10 rounded-full mb-2 object-cover"
-                          />
-                        )}
+                        {hasResult && userPick === game.team_b!.id.toString() && (isCorrect ? <span className="absolute top-1 right-1 text-xs bg-green-500 text-white rounded-full px-2 py-0.5">+1 Point</span> : <span className="absolute top-1 right-1 text-xs bg-red-500 text-white rounded-full px-2 py-0.5">Incorrect</span>)}
+                        {game.team_b?.logo_url && <Image src={game.team_b.logo_url} alt={`${game.team_b.name} logo`} width={40} height={40} className="w-10 h-10 rounded-full mb-2 object-cover"/>}
                         <span className="font-semibold text-center">{game.team_b?.name}</span>
                       </button>
                     </div>
+                    {hasResult && <p className="text-xs text-gray-400 mt-2 text-center">Correct Answer: {game.is_draw ? 'Draw' : (game.winning_team_id === game.team_a?.id ? game.team_a.name : game.team_b?.name)}</p>}
                   </div>
                 )
               })}
