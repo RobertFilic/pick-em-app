@@ -57,7 +57,7 @@ export default function LandingPage() {
             Official EuroBasket 2025 Challenge
           </div>
           <h1 className="text-5xl sm:text-7xl font-extrabold tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-yellow-500 to-orange-600 dark:from-yellow-400 dark:to-orange-400 drop-shadow-xl">
-            WHO'S GOT NEXT?
+            WHO&apos;S GOT NEXT?
           </h1>
           <p className="mt-6 text-lg sm:text-xl text-gray-700 dark:text-gray-300 max-w-2xl mx-auto">
             Think you know Euro hoops? Prove it. Predict the champions, beat your rivals, and climb the leaderboard.
