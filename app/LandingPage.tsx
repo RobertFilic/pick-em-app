@@ -1,25 +1,42 @@
 'use client';
 
 import Link from 'next/link';
-// FIXED: Replaced deprecated 'Basketball' icon with 'Dribbble'
-import { Trophy, Users, BarChart2, ArrowRight, Dribbble } from 'lucide-react';
+import { Trophy, Users, BarChart2, ArrowRight, ShieldCheck } from 'lucide-react';
+
+// A simple basketball icon created with SVG
+const BasketballIcon = () => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className="w-16 h-16 mx-auto text-gray-300 dark:text-gray-700 mb-6"
+  >
+    <circle cx="12" cy="12" r="10"></circle>
+    <path d="M4.93 4.93l14.14 14.14M19.07 4.93L4.93 19.07M2.12 12h19.76M12 2.12v19.76"></path>
+  </svg>
+);
+
 
 export default function LandingPage() {
   const features = [
     {
       icon: Trophy,
-      title: 'Prove Your Prowess',
-      description: 'Predict every game of EuroBasket 2025, from the group stage to the final buzzer.',
+      title: 'Predict Every Game',
+      description: 'From the opening tip-off in Cyprus to the final buzzer in Latvia, put your basketball IQ to the test.',
     },
     {
       icon: Users,
-      title: 'Challenge Your Crew',
-      description: 'Create private leagues and go head-to-head with friends for ultimate bragging rights.',
+      title: 'Create Private Leagues',
+      description: 'Challenge your friends, family, and colleagues for the ultimate bragging rights.',
     },
     {
       icon: BarChart2,
       title: 'Climb the Ranks',
-      description: 'Track your stats and rise through the global leaderboards with every correct pick.',
+      description: 'Track your stats on the live global leaderboard and prove you are the #1 fan.',
     },
   ];
 
@@ -31,18 +48,19 @@ export default function LandingPage() {
       {/* Hero Section */}
       <section className="text-center py-24 sm:py-40">
         <div className="container mx-auto px-6">
-          <div className="inline-block bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-300 rounded-full px-4 py-2 mb-6 font-semibold text-sm">
-            Coming Soon: EuroBasket 2025 Edition
+          <div className="inline-block bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-300 rounded-full px-4 py-2 mb-6 font-semibold text-sm animate-fade-in-up">
+            The Official EuroBasket 2025 Challenge
           </div>
-          <h1 className="text-5xl sm:text-7xl font-extrabold tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-sky-400 dark:from-blue-400 dark:to-sky-300">
-            The Ultimate Basketball Pick&apos;em
+          <h1 className="text-5xl sm:text-7xl font-extrabold tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-sky-400 dark:from-blue-400 dark:to-sky-300 animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
+            Where Every Pick Counts
           </h1>
-          <p className="mt-6 text-lg sm:text-xl text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
-            Think you know basketball? Prove it. Predict the winners of EuroBasket 2025 and compete for glory. Join the waitlist for exclusive early access.
+          <p className="mt-6 text-lg sm:text-xl text-gray-600 dark:text-gray-400 max-w-2xl mx-auto animate-fade-in-up" style={{ animationDelay: '0.4s' }}>
+            Think you know European basketball? Prove it. Predict the winners of EuroBasket 2025 and compete for glory. Join the waitlist for exclusive early access.
           </p>
           <Link
             href="/login"
-            className="mt-10 inline-flex items-center justify-center px-8 py-4 bg-blue-600 text-white rounded-full shadow-lg hover:bg-blue-700 font-bold text-lg transition-transform transform hover:scale-105 duration-300 ease-in-out"
+            className="mt-10 inline-flex items-center justify-center px-8 py-4 bg-blue-600 text-white rounded-full shadow-lg hover:bg-blue-700 font-bold text-lg transition-transform transform hover:scale-105 duration-300 ease-in-out animate-fade-in-up"
+            style={{ animationDelay: '0.6s' }}
           >
             Get Early Access
             <ArrowRight className="w-6 h-6 ml-3" />
@@ -68,8 +86,7 @@ export default function LandingPage() {
       {/* Final CTA Section */}
       <section className="text-center py-24">
         <div className="container mx-auto px-6">
-          {/* FIXED: Replaced deprecated 'Basketball' icon with 'Dribbble' */}
-          <Dribbble className="w-16 h-16 mx-auto text-gray-300 dark:text-gray-700 mb-6" />
+          <BasketballIcon />
           <h2 className="text-4xl sm:text-5xl font-bold tracking-tight">
             Your Champion Awaits.
           </h2>
