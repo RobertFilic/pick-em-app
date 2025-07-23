@@ -283,6 +283,7 @@ export default function CompetitionDetailClient({ id }: { id: string }) {
                           </button>
                       </div>
                       {hasResult && <p className="text-xs text-gray-400 mt-2 text-center">Correct Answer: {prop.correct_answer}</p>}
+                      {isLocked(prop.lock_date) && !hasResult && <p className="text-xs text-gray-400 mt-2 text-center">Result pending...</p>}
                     </div>
                   )
                 }
@@ -338,6 +339,7 @@ export default function CompetitionDetailClient({ id }: { id: string }) {
                       </button>
                     </div>
                     {hasResult && <p className="text-xs text-gray-400 mt-2 text-center">Correct Answer: {game.is_draw ? 'Draw' : (game.winning_team_id === game.team_a?.id ? game.team_a.name : game.team_b?.name)}</p>}
+                    {isLocked(game.game_date) && !hasResult && <p className="text-xs text-gray-400 mt-2 text-center">Result pending...</p>}
                   </div>
                 )
               })}
