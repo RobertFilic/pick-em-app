@@ -5,54 +5,39 @@ import { supabase } from '@/lib/supabaseClient';
 import type { User } from '@supabase/supabase-js';
 import Link from 'next/link';
 import { Trophy, ArrowRight } from 'lucide-react';
+import LandingPage from './LandingPage'; // Import the new landing page
 
 type Competition = {
   id: number;
   name: string;
 };
 
-export default function HomePage() {
-  const [user, setUser] = useState<User | null>(null);
+// This component shows the list of competitions to a logged-in user.
+function CompetitionsDashboard() {
   const [competitions, setCompetitions] = useState<Competition[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const getInitialData = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      setUser(user);
+    const fetchCompetitions = async () => {
+      setLoading(true);
+      const { data, error: fetchError } = await supabase
+        .from('competitions')
+        .select('id, name')
+        .order('created_at', { ascending: false });
 
-      if (user) {
-        const { data, error: fetchError } = await supabase
-          .from('competitions')
-          .select('id, name')
-          .order('created_at', { ascending: false });
-
-        if (fetchError) {
-          setError(fetchError.message);
-        } else {
-          setCompetitions(data);
-        }
+      if (fetchError) {
+        setError(fetchError.message);
+      } else if (data) {
+        setCompetitions(data);
       }
       setLoading(false);
     };
-    getInitialData();
+    fetchCompetitions();
   }, []);
 
   if (loading) {
-    return <div className="text-center p-10">Loading...</div>;
-  }
-
-  if (!user) {
-    return (
-        <div className="text-center p-10">
-            <h1 className="text-4xl font-bold">Welcome to Pick&apos;em!</h1>
-            <p className="text-lg text-gray-600 dark:text-gray-400 mt-2">Please log in to continue.</p>
-            <Link href="/login" className="mt-6 inline-block px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-semibold">
-                Go to Login
-            </Link>
-        </div>
-    );
+    return <div className="text-center p-10">Loading competitions...</div>;
   }
 
   return (
@@ -89,4 +74,26 @@ export default function HomePage() {
       </div>
     </div>
   );
+}
+
+// This is the main page component that decides what to show.
+export default function HomePage() {
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const getUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      setUser(user);
+      setLoading(false);
+    };
+    getUser();
+  }, []);
+
+  if (loading) {
+    return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+  }
+
+  // If there is a user, show the dashboard. Otherwise, show the landing page.
+  return user ? <CompetitionsDashboard /> : <LandingPage />;
 }
