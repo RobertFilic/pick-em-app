@@ -2,7 +2,8 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
-import { Trophy, Clock, Calendar, CheckCircle, BarChart2, Info, HelpCircle, XCircle } from 'lucide-react';
+// FIXED: Removed the unused 'XCircle' import
+import { Trophy, Clock, Calendar, CheckCircle, BarChart2, Info, HelpCircle } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 
