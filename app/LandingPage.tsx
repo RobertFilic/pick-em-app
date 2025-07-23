@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Trophy, Users, BarChart2, ArrowRight, ShieldCheck } from 'lucide-react';
+import { Trophy, Users, BarChart2, ArrowRight } from 'lucide-react';
 
 // A simple basketball icon created with SVG
 const BasketballIcon = () => (
