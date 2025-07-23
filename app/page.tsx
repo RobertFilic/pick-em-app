@@ -6,23 +6,10 @@ import type { User } from '@supabase/supabase-js';
 import Link from 'next/link';
 import { Trophy, ArrowRight } from 'lucide-react';
 import LandingPage from './LandingPage'; // Import the new landing page
-import { Metadata } from 'next';
 
 type Competition = {
   id: number;
   name: string;
-};
-
-export const metadata: Metadata = {
-  title: "Pick'em - Sports Predictions Made Simple",
-  description: 'The most intuitive sports prediction platform. Make picks, compete with friends, and climb the leaderboards.',
-  keywords: 'sports predictions, pick em, fantasy sports, betting',
-  authors: [{ name: "Pick'em Team" }],
-  viewport: 'width=device-width, initial-scale=1, maximum-scale=1',
-  themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#ffffff' },
-    { media: '(prefers-color-scheme: dark)', color: '#0a0a0a' },
-  ],
 };
 
 // This component shows the list of competitions to a logged-in user.
