@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { Trophy, Award, CheckCircle, XCircle, Medal } from 'lucide-react';
 import Link from 'next/link';
 
+// Define the types for our data
 type LeaderboardEntry = {
   user_id: string;
   username: string;
@@ -14,6 +15,7 @@ type LeaderboardEntry = {
   total_picks: number;
 };
 
+// This component receives the competitionId as a simple prop
 export default function LeaderboardClientPage({ competitionId }: { competitionId: number }) {
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [competitionName, setCompetitionName] = useState<string>('');
@@ -44,6 +46,10 @@ export default function LeaderboardClientPage({ competitionId }: { competitionId
       setCompetitionName(competitionRes.data.name);
 
       if (leaderboardRes.error) throw leaderboardRes.error;
+      
+      // ADDED: console.log to inspect the data from the server
+      console.log('Data returned from get_leaderboard function:', leaderboardRes.data);
+
       const data = leaderboardRes.data as LeaderboardEntry[];
       setLeaderboard(data);
 
