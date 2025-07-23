@@ -5,6 +5,8 @@ import { supabase } from '@/lib/supabaseClient';
 import { ClipboardList, CheckCircle, Edit, XCircle, CalendarClock } from 'lucide-react';
 
 // --- Type Definitions ---
+
+// This type represents the clean, final shape of our game data.
 type GameForResult = {
   id: number;
   stage: string | null;
@@ -15,6 +17,19 @@ type GameForResult = {
   winning_team_id: number | null;
   is_draw: boolean;
 };
+
+// This type represents the raw, potentially inconsistent data from Supabase.
+type RawGameData = {
+  id: number;
+  stage: string | null;
+  game_date: string;
+  winning_team_id: number | null;
+  is_draw: boolean;
+  competitions: { name: string } | { name: string }[] | null;
+  team_a: { id: number; name: string } | { id: number; name: string }[] | null;
+  team_b: { id: number; name: string } | { id: number; name: string }[] | null;
+};
+
 
 // --- Main Page Component ---
 export default function ResultsPage() {
@@ -50,7 +65,21 @@ export default function ResultsPage() {
     } else if (data) {
       const now = new Date();
       
-      const validGames = data.filter(game => game.team_a && game.team_b);
+      // This function safely transforms the data from Supabase into the GameForResult type.
+      const transformData = (gameData: RawGameData): GameForResult => ({
+        id: gameData.id,
+        stage: gameData.stage,
+        game_date: gameData.game_date,
+        winning_team_id: gameData.winning_team_id,
+        is_draw: gameData.is_draw,
+        competitions: Array.isArray(gameData.competitions) ? gameData.competitions[0] : gameData.competitions,
+        team_a: Array.isArray(gameData.team_a) ? gameData.team_a[0] : gameData.team_a,
+        team_b: Array.isArray(gameData.team_b) ? gameData.team_b[0] : gameData.team_b,
+      });
+
+      const validGames = data
+        .map(transformData)
+        .filter(game => game.team_a && game.team_b);
 
       const pastGames = validGames.filter(game => new Date(game.game_date) < now);
       const futureGames = validGames.filter(game => new Date(game.game_date) >= now);
@@ -58,9 +87,9 @@ export default function ResultsPage() {
       const pending = pastGames.filter(game => game.winning_team_id === null && !game.is_draw);
       const completed = pastGames.filter(game => game.winning_team_id !== null || game.is_draw);
       
-      setPendingGames(pending.reverse() as GameForResult[]);
-      setCompletedGames(completed.reverse() as GameForResult[]);
-      setScheduledGames(futureGames as GameForResult[]);
+      setPendingGames(pending.reverse());
+      setCompletedGames(completed.reverse());
+      setScheduledGames(futureGames);
     }
     setLoading(false);
   }, []);
