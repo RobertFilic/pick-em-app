@@ -2,17 +2,34 @@
   "competition": {
     "name": "FIBA EuroBasket 2025",
     "description": "The 42nd edition of the continental basketball championship, co-hosted by Cyprus, Finland, Latvia, and Poland.",
-    "lock_date": "2025-08-27T10:30:00.000Z"
+    "lock_date": "2025-08-27T10:30:00.000Z",
+    "allow_draws": false
   },
   "teams": [
-    { "name": "Belgium" }, { "name": "Bosnia and Herzegovina" }, { "name": "Cyprus" },
-    { "name": "Czechia" }, { "name": "Estonia" }, { "name": "Finland" },
-    { "name": "France" }, { "name": "Georgia" }, { "name": "Germany" },
-    { "name": "Great Britain" }, { "name": "Greece" }, { "name": "Iceland" },
-    { "name": "Israel" }, { "name": "Italy" }, { "name": "Latvia" },
-    { "name": "Lithuania" }, { "name": "Montenegro" }, { "name": "Poland" },
-    { "name": "Portugal" }, { "name": "Serbia" }, { "name": "Slovenia" },
-    { "name": "Spain" }, { "name": "Sweden" }, { "name": "Turkey" }
+    { "name": "Belgium", "logo_url": "https://upload.wikimedia.org/wikipedia/commons/6/65/Flag_of_Belgium.svg" },
+    { "name": "Bosnia and Herzegovina", "logo_url": "https://upload.wikimedia.org/wikipedia/commons/b/bf/Flag_of_Bosnia_and_Herzegovina.svg" },
+    { "name": "Cyprus", "logo_url": "https://upload.wikimedia.org/wikipedia/commons/d/d4/Flag_of_Cyprus.svg" },
+    { "name": "Czechia", "logo_url": "https://upload.wikimedia.org/wikipedia/commons/c/cb/Flag_of_the_Czech_Republic.svg" },
+    { "name": "Estonia", "logo_url": "https://upload.wikimedia.org/wikipedia/commons/8/8f/Flag_of_Estonia.svg" },
+    { "name": "Finland", "logo_url": "https://upload.wikimedia.org/wikipedia/commons/b/bc/Flag_of_Finland.svg" },
+    { "name": "France", "logo_url": "https://upload.wikimedia.org/wikipedia/en/c/c3/Flag_of_France.svg" },
+    { "name": "Georgia", "logo_url": "https://upload.wikimedia.org/wikipedia/commons/0/0f/Flag_of_Georgia.svg" },
+    { "name": "Germany", "logo_url": "https://upload.wikimedia.org/wikipedia/en/b/ba/Flag_of_Germany.svg" },
+    { "name": "Great Britain", "logo_url": "https://upload.wikimedia.org/wikipedia/en/a/ae/Flag_of_the_United_Kingdom.svg" },
+    { "name": "Greece", "logo_url": "https://upload.wikimedia.org/wikipedia/commons/5/5c/Flag_of_Greece.svg" },
+    { "name": "Iceland", "logo_url": "https://upload.wikimedia.org/wikipedia/commons/c/ce/Flag_of_Iceland.svg" },
+    { "name": "Israel", "logo_url": "https://upload.wikimedia.org/wikipedia/commons/d/d4/Flag_of_Israel.svg" },
+    { "name": "Italy", "logo_url": "https://upload.wikimedia.org/wikipedia/en/0/03/Flag_of_Italy.svg" },
+    { "name": "Latvia", "logo_url": "https://upload.wikimedia.org/wikipedia/commons/8/84/Flag_of_Latvia.svg" },
+    { "name": "Lithuania", "logo_url": "https://upload.wikimedia.org/wikipedia/commons/1/11/Flag_of_Lithuania.svg" },
+    { "name": "Montenegro", "logo_url": "https://upload.wikimedia.org/wikipedia/commons/6/64/Flag_of_Montenegro.svg" },
+    { "name": "Poland", "logo_url": "https://upload.wikimedia.org/wikipedia/en/1/12/Flag_of_Poland.svg" },
+    { "name": "Portugal", "logo_url": "https://upload.wikimedia.org/wikipedia/commons/5/5c/Flag_of_Portugal.svg" },
+    { "name": "Serbia", "logo_url": "https://upload.wikimedia.org/wikipedia/commons/f/ff/Flag_of_Serbia.svg" },
+    { "name": "Slovenia", "logo_url": "https://upload.wikimedia.org/wikipedia/commons/f/f0/Flag_of_Slovenia.svg" },
+    { "name": "Spain", "logo_url": "https://upload.wikimedia.org/wikipedia/en/9/9a/Flag_of_Spain.svg" },
+    { "name": "Sweden", "logo_url": "https://upload.wikimedia.org/wikipedia/en/4/4c/Flag_of_Sweden.svg" },
+    { "name": "Turkey", "logo_url": "https://upload.wikimedia.org/wikipedia/commons/b/b4/Flag_of_Turkey.svg" }
   ],
   "team_groupings": [
     { "team": "Czechia", "group": "Group A" }, { "team": "Estonia", "group": "Group A" },
