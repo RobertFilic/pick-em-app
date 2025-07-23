@@ -32,23 +32,32 @@ export default function RootLayout({
 }: {
   children: React.ReactNode
 }) {
+  const htmlClasses = `${plusJakartaSans.variable} ${inter.variable}`;
+  const bodyClasses = [
+    plusJakartaSans.className,
+    'antialiased',
+    'selection:bg-violet-200',
+    'selection:text-violet-900',
+    'dark:selection:bg-violet-800',
+    'dark:selection:text-violet-100',
+    'overflow-x-hidden',
+    'bg-gradient-to-br',
+    'from-slate-50',
+    'via-white',
+    'to-slate-100',
+    'dark:bg-gradient-to-br',
+    'dark:from-slate-950',
+    'dark:via-slate-900',
+    'dark:to-black',
+    'text-slate-900',
+    'dark:text-slate-100',
+    'min-h-screen',
+    'relative'
+  ].join(' ');
+
   return (
-    <html lang="en" className={`${plusJakartaSans.variable} ${inter.variable}`} suppressHydrationWarning>
-      <body className={`
-        ${plusJakartaSans.className} 
-        antialiased 
-        selection:bg-violet-200 
-        selection:text-violet-900
-        dark:selection:bg-violet-800 
-        dark:selection:text-violet-100
-        overflow-x-hidden
-        bg-gradient-to-br from-slate-50 via-white to-slate-100
-        dark:bg-gradient-to-br dark:from-slate-950 dark:via-slate-900 dark:to-black
-        text-slate-900 
-        dark:text-slate-100
-        min-h-screen
-        relative
-      `}>
+    <html lang="en" className={htmlClasses} suppressHydrationWarning>
+      <body className={bodyClasses}>
         {/* Ambient background effects */}
         <div className="fixed inset-0 -z-10 overflow-hidden pointer-events-none">
           {/* Primary gradient orb */}
