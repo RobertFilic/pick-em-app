@@ -66,8 +66,13 @@ export default function AuthPage() {
         if (signUpError) throw signUpError;
         setSuccessMessage('Sign up successful! Please check your email to verify your account.');
       }
-    } catch (err: any) {
-      setError(err.message || 'An unexpected error occurred.');
+    } catch (err) {
+      // FIXED: Replaced 'any' with a type guard for safer error handling.
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError('An unexpected error occurred.');
+      }
     } finally {
       setLoading(false);
     }
