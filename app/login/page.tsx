@@ -1,372 +1,210 @@
 'use client';
 
 import React, { useState } from 'react';
-// import { useRouter } from 'next/navigation'; // FIX: Removed Next.js router
-import { createClient } from '@supabase/supabase-js'; // FIX: Added direct import for Supabase client
+import { useRouter } from 'next/navigation';
+import { supabase } from '@/lib/supabaseClient';
 import { Mail, Lock, User, LogIn } from 'lucide-react';
 
-// FIX: Initialize Supabase client directly.
-// IMPORTANT: Replace with your actual Supabase project URL and public anon key.
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://your-project-id.supabase.co';
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'your-anon-key';
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
+const Card = ({ children, className = '' }: { children: React.ReactNode; className?: string }) => (
+  <div className={`bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-sm ${className}`}>
+    {children}
+  </div>
+);
 
+const CardContent = ({ children, className = '' }: { children: React.ReactNode; className?: string }) => <div className={`p-6 pt-0 ${className}`}>{children}</div>;
+const CardFooter = ({ children, className = '' }: { children: React.ReactNode; className?: string }) => <div className={`flex items-center p-6 pt-0 ${className}`}>{children}</div>;
+
+interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
+  icon: React.ElementType;
+}
+
+const Input = React.forwardRef<HTMLInputElement, InputProps>(({ id, type, placeholder, icon: Icon, ...props }, ref) => (
+  <div className="relative">
+    <span className="absolute inset-y-0 left-0 flex items-center pl-3">
+      <Icon className="h-5 w-5 text-gray-400" />
+    </span>
+    <input
+      id={id}
+      type={type}
+      ref={ref}
+      placeholder={placeholder}
+      className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-700 rounded-md bg-gray-50 dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+      required={type !== 'password' && type !== 'email'}
+      {...props}
+    />
+  </div>
+));
+Input.displayName = 'Input';
+
+interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+    isLoading?: boolean;
+}
+
+const Button = ({ children, isLoading = false, className = '', ...props }: ButtonProps) => (
+  <button
+    disabled={isLoading}
+    className={`w-full inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50
+      bg-blue-600 text-white hover:bg-blue-700 h-10 px-4 py-2 ${className}`}
+    {...props}
+  >
+    {isLoading ? (
+        <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+    ) : null}
+    {isLoading ? 'Processing...' : children}
+  </button>
+);
 
 export default function AuthPage() {
-    const [isLoginView, setIsLoginView] = useState(true);
-    const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
-    const [username, setUsername] = useState('');
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState('');
-    const [successMessage, setSuccessMessage] = useState('');
-    // const router = useRouter(); // FIX: Removed Next.js router instance
+  const [isLoginView, setIsLoginView] = useState(true);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [username, setUsername] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
+  const router = useRouter();
 
-    const handleEmailAuth = async (e: React.FormEvent<HTMLFormElement>) => {
-        e.preventDefault();
-        setLoading(true);
-        setError('');
-        setSuccessMessage('');
+  const handleEmailAuth = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+    setSuccessMessage('');
 
-        // Basic validation
-        if (!isLoginView && !username.trim()) {
-            setError('Username is required.');
-            setLoading(false);
-            return;
-        }
-        if (!email) {
-            setError('Email is required.');
-            setLoading(false);
-            return;
-        }
-        if (!password) {
-            setError('Password is required.');
-            setLoading(false);
-            return;
-        }
-
-
-        try {
-            if (isLoginView) {
-                const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
-                if (signInError) throw signInError;
-                setSuccessMessage('Login successful! Redirecting...');
-                // FIX: Replaced Next.js router with standard window.location for redirection.
-                setTimeout(() => {
-                    window.location.href = '/dashboard';
-                }, 1500);
-            } else {
-                const { error: signUpError } = await supabase.auth.signUp({
-                    email,
-                    password,
-                    options: { data: { username: username.trim() } },
-                });
-                if (signUpError) throw signUpError;
-                setSuccessMessage('Sign up successful! Please check your email to verify your account.');
-            }
-        } catch (err) {
-            if (err instanceof Error) {
-                setError(err.message);
-            } else {
-                setError('An unexpected error occurred.');
-            }
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handleGoogleLogin = async () => {
-        setError('');
-        setLoading(true);
-        const { error } = await supabase.auth.signInWithOAuth({
-            provider: 'google',
-            options: {
-                redirectTo: `${window.location.origin}/auth/callback` // Important for OAuth flow
-            }
+    try {
+      if (isLoginView) {
+        const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+        if (signInError) throw signInError;
+        setSuccessMessage('Login successful! Redirecting...');
+        setTimeout(() => router.push('/'), 1000);
+      } else {
+        if (!username.trim()) throw new Error('Username is required.');
+        const { error: signUpError } = await supabase.auth.signUp({
+          email,
+          password,
+          options: { data: { username: username.trim() } },
         });
-        if (error) {
-            setError(error.message);
-            setLoading(false);
-        }
-    };
+        if (signUpError) throw signUpError;
+        setSuccessMessage('Sign up successful! Please check your email to verify your account.');
+      }
+    } catch (err) {
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError('An unexpected error occurred.');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    return (
-        <>
-            {/* This style block contains all the CSS needed for this component,
-                mirroring the aesthetic of the LandingPage. */}
-            <style jsx global>{`
-                body {
-                    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-                    line-height: 1.6;
-                    color: #ffffff;
-                    background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%);
-                    overflow-x: hidden;
-                }
-                .auth-container {
-                    min-height: 100vh;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    padding: 20px;
-                    position: relative;
-                }
-                .bg-elements {
-                    position: fixed;
-                    top: 0;
-                    left: 0;
-                    width: 100%;
-                    height: 100%;
-                    z-index: -1;
-                    overflow: hidden;
-                }
-                .floating-shape {
-                    position: absolute;
-                    background: linear-gradient(45deg, rgba(255, 107, 107, 0.1), rgba(78, 205, 196, 0.1));
-                    border-radius: 50%;
-                    animation: float 20s infinite linear;
-                }
-                .floating-shape:nth-child(1) { width: 80px; height: 80px; top: 20%; left: 10%; animation-delay: 0s; }
-                .floating-shape:nth-child(2) { width: 120px; height: 120px; top: 60%; right: 10%; animation-delay: -7s; }
-                .floating-shape:nth-child(3) { width: 60px; height: 60px; top: 80%; left: 30%; animation-delay: -14s; }
-                @keyframes float {
-                    0% { transform: translateY(0px) rotate(0deg); }
-                    33% { transform: translateY(-20px) rotate(120deg); }
-                    66% { transform: translateY(20px) rotate(240deg); }
-                    100% { transform: translateY(0px) rotate(360deg); }
-                }
-                .auth-card {
-                    width: 100%;
-                    max-width: 420px;
-                    background: rgba(255, 255, 255, 0.05);
-                    border-radius: 20px;
-                    backdrop-filter: blur(10px);
-                    border: 1px solid rgba(255, 255, 255, 0.1);
-                    padding: 40px;
-                    text-align: center;
-                    animation: slideUp 0.6s ease-out;
-                }
-                @keyframes slideUp {
-                    from { opacity: 0; transform: translateY(30px); }
-                    to { opacity: 1; transform: translateY(0); }
-                }
-                .auth-header h1 {
-                    font-size: 2.5rem;
-                    font-weight: 800;
-                    margin-bottom: 1rem;
-                    background: linear-gradient(135deg, #ff6b6b, #4ecdc4, #45b7d1);
-                    background-size: 300% 300%;
-                    -webkit-background-clip: text;
-                    -webkit-text-fill-color: transparent;
-                    background-clip: text;
-                    animation: gradientShift 4s ease-in-out infinite;
-                }
-                @keyframes gradientShift {
-                    0%, 100% { background-position: 0% 50%; }
-                    50% { background-position: 100% 50%; }
-                }
-                .auth-header p {
-                    color: #b8b8d1;
-                    margin-bottom: 2rem;
-                }
-                .input-group {
-                    margin-bottom: 1.5rem;
-                    text-align: left;
-                }
-                .input-group label {
-                    display: block;
-                    margin-bottom: 0.5rem;
-                    font-size: 0.9rem;
-                    color: #b8b8d1;
-                }
-                .input-field {
-                    width: 100%;
-                    padding: 12px 15px;
-                    background: rgba(0, 0, 0, 0.2);
-                    border: 1px solid rgba(255, 255, 255, 0.1);
-                    border-radius: 10px;
-                    color: #ffffff;
-                    font-size: 1rem;
-                    transition: border-color 0.3s ease, box-shadow 0.3s ease;
-                }
-                .input-field:focus {
-                    outline: none;
-                    border-color: #4ecdc4;
-                    box-shadow: 0 0 15px rgba(78, 205, 196, 0.3);
-                }
-                .btn-primary, .btn-secondary {
-                    width: 100%;
-                    padding: 16px 40px;
-                    border-radius: 50px;
-                    font-size: 1.1rem;
-                    font-weight: 600;
-                    cursor: pointer;
-                    text-decoration: none;
-                    display: inline-flex;
-                    align-items: center;
-                    justify-content: center;
-                    transition: all 0.3s ease;
-                    margin-bottom: 1rem;
-                }
-                .btn-primary {
-                    background: linear-gradient(135deg, #ff6b6b, #ee5a24);
-                    color: white;
-                    border: none;
-                    position: relative;
-                    overflow: hidden;
-                    box-shadow: 0 8px 25px rgba(255, 107, 107, 0.3);
-                }
-                .btn-primary:hover:not(:disabled) {
-                    transform: translateY(-2px);
-                    box-shadow: 0 12px 35px rgba(255, 107, 107, 0.4);
-                }
-                .btn-primary:disabled {
-                    opacity: 0.6;
-                    cursor: not-allowed;
-                }
-                .btn-secondary {
-                    background: transparent;
-                    color: #4ecdc4;
-                    border: 2px solid #4ecdc4;
-                }
-                .btn-secondary:hover:not(:disabled) {
-                    background: #4ecdc4;
-                    color: #0f0f23;
-                    transform: translateY(-2px);
-                }
-                .auth-switch {
-                    color: #b8b8d1;
-                    font-size: 0.95rem;
-                }
-                .auth-switch button {
-                    background: none;
-                    border: none;
-                    color: #4ecdc4;
-                    font-weight: 600;
-                    cursor: pointer;
-                    margin-left: 5px;
-                }
-                .auth-switch button:hover {
-                    text-decoration: underline;
-                }
-                .divider {
-                    display: flex;
-                    align-items: center;
-                    text-align: center;
-                    color: #b8b8d1;
-                    margin: 1.5rem 0;
-                }
-                .divider::before, .divider::after {
-                    content: '';
-                    flex: 1;
-                    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-                }
-                .divider:not(:empty)::before { margin-right: .5em; }
-                .divider:not(:empty)::after { margin-left: .5em; }
-                .message {
-                    padding: 10px;
-                    border-radius: 8px;
-                    margin-bottom: 1rem;
-                    font-weight: 500;
-                }
-                .message.error {
-                    background-color: rgba(255, 107, 107, 0.2);
-                    color: #ff6b6b;
-                }
-                .message.success {
-                    background-color: rgba(78, 205, 196, 0.2);
-                    color: #4ecdc4;
-                }
-                .loading-spinner {
-                    animation: spin 1s linear infinite;
-                    margin-right: 10px;
-                }
-                @keyframes spin {
-                    from { transform: rotate(0deg); }
-                    to { transform: rotate(360deg); }
-                }
-            `}</style>
-            <div className="auth-container">
-                <div className="bg-elements">
-                    <div className="floating-shape"></div>
-                    <div className="floating-shape"></div>
-                    <div className="floating-shape"></div>
+  const handleGoogleLogin = async () => {
+    setError('');
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+    });
+    if (error) {
+      setError(error.message);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center p-4 font-sans">
+      <div className="w-full max-w-md mx-auto">
+        <div className="text-center mb-8">
+            <LogIn className="mx-auto h-12 w-12 text-blue-600"/>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mt-4">Pick&apos;em App</h1>
+            <p className="text-gray-500 dark:text-gray-400 mt-2">
+                {isLoginView ? 'Welcome back! Sign in to continue.' : 'Create an account to start playing.'}
+            </p>
+        </div>
+
+        <Card>
+          <form onSubmit={handleEmailAuth}>
+            <CardContent className="space-y-4">
+              {!isLoginView && (
+                <div className="space-y-2">
+                  <label htmlFor="username" className="text-sm font-medium text-gray-700 dark:text-gray-300">Username</label>
+                  <Input 
+                    id="username" 
+                    type="text" 
+                    placeholder="Your cool username" 
+                    icon={User} 
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                  />
                 </div>
-                <div className="auth-card">
-                    <div className="auth-header">
-                        <h1>{isLoginView ? 'Welcome Back' : 'Create Account'}</h1>
-                        <p>{isLoginView ? 'Sign in to continue the challenge.' : 'Join the game in seconds.'}</p>
-                    </div>
+              )}
+              <div className="space-y-2">
+                <label htmlFor="email" className="text-sm font-medium text-gray-700 dark:text-gray-300">Email</label>
+                <Input 
+                  id="email" 
+                  type="email" 
+                  placeholder="name@example.com" 
+                  icon={Mail} 
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <label htmlFor="password" className="text-sm font-medium text-gray-700 dark:text-gray-300">Password</label>
+                <Input 
+                  id="password" 
+                  type="password" 
+                  placeholder="••••••••" 
+                  icon={Lock} 
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
+              </div>
+            </CardContent>
+            <CardFooter className="flex-col space-y-4">
+              {error && <p className="text-sm text-red-500 text-center">{error}</p>}
+              {successMessage && <p className="text-sm text-green-500 text-center">{successMessage}</p>}
+              
+              <Button type="submit" isLoading={loading} className="w-full">
+                {isLoginView ? 'Sign In' : 'Create Account'}
+              </Button>
 
-                    <form onSubmit={handleEmailAuth}>
-                        {!isLoginView && (
-                            <div className="input-group">
-                                <label htmlFor="username">Username</label>
-                                <input
-                                    id="username"
-                                    type="text"
-                                    placeholder="Your cool username"
-                                    value={username}
-                                    onChange={(e) => setUsername(e.target.value)}
-                                    className="input-field"
-                                />
-                            </div>
-                        )}
-                        <div className="input-group">
-                            <label htmlFor="email">Email</label>
-                            <input
-                                id="email"
-                                type="email"
-                                placeholder="name@example.com"
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
-                                className="input-field"
-                                required
-                            />
-                        </div>
-                        <div className="input-group">
-                            <label htmlFor="password">Password</label>
-                            <input
-                                id="password"
-                                type="password"
-                                placeholder="••••••••"
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                className="input-field"
-                                required
-                            />
-                        </div>
+              <p className="text-sm text-center text-gray-600 dark:text-gray-400">
+                {isLoginView ? "Don't have an account?" : "Already have an account?"}
+                <button 
+                  type="button"
+                  onClick={() => setIsLoginView(!isLoginView)}
+                  className="font-semibold text-blue-600 hover:underline ml-1"
+                >
+                  {isLoginView ? 'Sign Up' : 'Sign In'}
+                </button>
+              </p>
+            </CardFooter>
+          </form>
 
-                        {error && <div className="message error">{error}</div>}
-                        {successMessage && <div className="message success">{successMessage}</div>}
-
-                        <button type="submit" className="btn-primary" disabled={loading}>
-                            {loading && !successMessage && (
-                                <svg className="loading-spinner h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                </svg>
-                            )}
-                            {loading ? 'Processing...' : (isLoginView ? 'Sign In' : 'Create Account')}
-                        </button>
-                    </form>
-
-                    <div className="divider">or</div>
-
-                    <button onClick={handleGoogleLogin} className="btn-secondary" disabled={loading}>
-                        <svg className="mr-2 h-5 w-5" aria-hidden="true" focusable="false" data-prefix="fab" data-icon="google" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 488 512">
-                            <path fill="currentColor" d="M488 261.8C488 403.3 381.5 512 244 512 110.3 512 0 401.7 0 265.4 0 129.2 109.3 20.4 244 20.4c65.4 0 123.4 26.2 165.7 68.5l-63.4 61.9C314.6 118.2 282.4 102 244 102c-83.2 0-151.2 67.3-151.2 150.4s68 150.4 151.2 150.4c97.1 0 134.3-70.2 138.6-106.4H244v-75.2h243.8c1.3 7.8 2.2 15.6 2.2 23.4z"></path>
-                        </svg>
-                        Sign in with Google
-                    </button>
-
-                    <div className="auth-switch">
-                        {isLoginView ? "Don't have an account?" : 'Already have an account?'}
-                        <button type="button" onClick={() => { setIsLoginView(!isLoginView); setError(''); setSuccessMessage(''); }}>
-                            {isLoginView ? 'Sign Up' : 'Sign In'}
-                        </button>
-                    </div>
-                </div>
+          <div className="relative px-6 pb-4">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-gray-300 dark:border-gray-700" />
             </div>
-        </>
-    );
+            <div className="relative flex justify-center text-sm">
+              <span className="bg-white dark:bg-gray-900 px-2 text-gray-500 dark:text-gray-400">
+                Or continue with
+              </span>
+            </div>
+          </div>
+
+          <div className="p-6 pt-0">
+            <button
+              onClick={handleGoogleLogin}
+              className="w-full inline-flex items-center justify-center rounded-md text-sm font-medium border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800 h-10 px-4 py-2"
+            >
+              <svg className="mr-2 h-5 w-5" aria-hidden="true" focusable="false" data-prefix="fab" data-icon="google" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 488 512">
+                <path fill="currentColor" d="M488 261.8C488 403.3 381.5 512 244 512 110.3 512 0 401.7 0 265.4 0 129.2 109.3 20.4 244 20.4c65.4 0 123.4 26.2 165.7 68.5l-63.4 61.9C314.6 118.2 282.4 102 244 102c-83.2 0-151.2 67.3-151.2 150.4s68 150.4 151.2 150.4c97.1 0 134.3-70.2 138.6-106.4H244v-75.2h243.8c1.3 7.8 2.2 15.6 2.2 23.4z"></path>
+              </svg>
+              Sign in with Google
+            </button>
+          </div>
+        </Card>
+      </div>
+    </div>
+  );
 }
