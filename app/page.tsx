@@ -149,7 +149,7 @@ function UnifiedDashboard({ user }: { user: User }) {
             .insert({
                 name: newLeagueName,
                 admin_id: profile.id,
-                competition_id: selectedCompId,
+                competition_id: Number(selectedCompId),
                 invite_code: inviteCode
             })
             .select()
