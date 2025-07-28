@@ -10,6 +10,9 @@ FIXES:
 - Implemented a custom Type Guard function `isLeagueArray` to safely validate
   the data structure from Supabase at runtime. This is the most robust
   solution and resolves all linter warnings related to type assertions.
+- Replaced 'any' with 'unknown' for better type safety in the type guard.
+- Removed unused 'user' state variable.
+- Marked unused 'err' parameter in copy function to satisfy linter.
 */
 'use client';
 
@@ -45,7 +48,7 @@ type Profile = {
 };
 
 // Type Guard to check if the data is a valid League array
-function isLeagueArray(data: any): data is League[] {
+function isLeagueArray(data: unknown): data is League[] {
     return (
         Array.isArray(data) &&
         (data.length === 0 ||
@@ -56,7 +59,6 @@ function isLeagueArray(data: any): data is League[] {
 }
 
 export default function DashboardPage() {
-    const [user, setUser] = useState<User | null>(null);
     const [profile, setProfile] = useState<Profile | null>(null);
     const [leagues, setLeagues] = useState<League[]>([]);
     const [publicCompetitions, setPublicCompetitions] = useState<Competition[]>([]);
@@ -101,7 +103,6 @@ export default function DashboardPage() {
         const checkUserAndFetchData = async () => {
             const { data: { session } } = await supabase.auth.getSession();
             if (session?.user) {
-                setUser(session.user);
                 const { data: profileData } = await supabase.from('profiles').select('*').eq('id', session.user.id).single();
                 setProfile(profileData);
 
@@ -227,7 +228,7 @@ export default function DashboardPage() {
     const copyToClipboard = (text: string) => {
         navigator.clipboard.writeText(text).then(() => {
             alert("Invite code copied to clipboard!");
-        }, (err) => {
+        }, (_err) => {
             alert("Failed to copy text.");
         });
     };
