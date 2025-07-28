@@ -11,13 +11,13 @@ FIXES:
   the data structure from Supabase at runtime. This is the most robust
   solution and resolves all linter warnings related to type assertions.
 - Replaced 'any' with 'unknown' for better type safety in the type guard.
-- Removed unused 'user' state variable.
-- Marked unused 'err' parameter in copy function to satisfy linter.
+- Removed unused 'User' type import from Supabase.
+- Removed the unused parameter from the copyToClipboard error handler.
 */
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { createClient, User } from '@supabase/supabase-js';
+import { createClient } from '@supabase/supabase-js';
 import { LogOut, Plus, Users, Trash2, Copy, X } from 'lucide-react';
 
 // Initialize Supabase client
@@ -228,7 +228,7 @@ export default function DashboardPage() {
     const copyToClipboard = (text: string) => {
         navigator.clipboard.writeText(text).then(() => {
             alert("Invite code copied to clipboard!");
-        }, (_err) => {
+        }, () => {
             alert("Failed to copy text.");
         });
     };
