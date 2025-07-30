@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
-// FIXED: Removed the unused 'Trophy' import
 import { Award, CheckCircle, XCircle, Medal, Users } from 'lucide-react';
 import Link from 'next/link';
 
@@ -21,7 +20,6 @@ type LeagueInfo = {
     competitions: { name: string } | null;
 }
 
-// This type represents the raw, potentially inconsistent data from Supabase
 type RawLeagueData = {
     name: string;
     competition_id: number;
@@ -35,6 +33,8 @@ export default function LeagueLeaderboardClient({ leagueId }: { leagueId: string
   const [currentUserStats, setCurrentUserStats] = useState<LeaderboardEntry | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const competitionId = parseInt(leagueId, 10);
 
   const getRankColor = (rank: number) => {
     if (rank === 1) return 'text-yellow-400';
@@ -57,7 +57,6 @@ export default function LeagueLeaderboardClient({ leagueId }: { leagueId: string
 
       if (leagueRes.error) throw leagueRes.error;
       
-      // FIXED: Replaced 'any' with a specific type for the raw data
       const rawLeagueData = leagueRes.data as RawLeagueData;
       const transformedLeagueInfo: LeagueInfo = {
           name: rawLeagueData.name,

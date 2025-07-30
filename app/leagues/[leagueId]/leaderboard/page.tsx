@@ -1,9 +1,13 @@
 import LeagueLeaderboardClient from './LeagueLeaderboardClient';
 
+// This interface correctly defines the shape of the props for an async page
 interface Props {
-  params: { leagueId: string };
+  params: Promise<{ leagueId: string }>;
 }
 
-export default function LeagueLeaderboardPage({ params }: Props) {
-  return <LeagueLeaderboardClient leagueId={params.leagueId} />;
+// This is now an async Server Component that correctly awaits the params
+export default async function LeagueLeaderboardPage({ params }: Props) {
+  const { leagueId } = await params;
+
+  return <LeagueLeaderboardClient leagueId={leagueId} />;
 }
