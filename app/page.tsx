@@ -262,26 +262,28 @@ function UnifiedDashboard({ user }: { user: User }) {
                     {leagues.length > 0 ? (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                             {leagues.map(league => (
-                                <div key={league.id} className="relative group bg-white dark:bg-slate-900 p-6 rounded-2xl border border-gray-200 dark:border-slate-800 flex flex-col justify-between hover:border-blue-500 dark:hover:border-violet-500 transition-all">
-                                    <Link href={`/competitions/${league.competition_id}`} className="absolute inset-0 z-0 rounded-2xl" aria-label={`Make picks for ${league.name}`}></Link>
-                                    <div className="relative z-10">
-                                        <h3 className="text-xl font-bold text-blue-600 dark:text-violet-400 mb-1">{league.name}</h3>
-                                        <p className="text-gray-600 dark:text-slate-400 mb-4 text-sm">Competition: {league.competitions?.name || 'N/A'}</p>
-                                        <div className="flex items-center gap-2 text-sm bg-gray-100 dark:bg-slate-800 p-2 rounded-lg">
-                                            <span className="text-gray-500 dark:text-slate-400">Invite Code:</span>
-                                            <strong className="text-gray-800 dark:text-white">{league.invite_code}</strong>
-                                            <button onClick={(e) => copyToClipboard(e, league.invite_code)} className="ml-auto p-1 text-gray-500 dark:text-slate-400 hover:text-black dark:hover:text-white"><Copy size={16} /></button>
+                                <div key={league.id} className="relative bg-white dark:bg-slate-900 p-6 rounded-2xl border border-gray-200 dark:border-slate-800 flex flex-col justify-between hover:border-blue-500 dark:hover:border-violet-500 transition-all group">
+                                    <Link href={`/competitions/${league.competition_id}`} className="absolute inset-0 z-10 rounded-2xl" aria-label={`Make picks for ${league.name}`}></Link>
+                                    <div className="flex flex-col h-full">
+                                        <div className="flex-grow">
+                                            <h3 className="text-xl font-bold text-blue-600 dark:text-violet-400 mb-1">{league.name}</h3>
+                                            <p className="text-gray-600 dark:text-slate-400 mb-4 text-sm">Competition: {league.competitions?.name || 'N/A'}</p>
+                                            <div className="flex items-center gap-2 text-sm bg-gray-100 dark:bg-slate-800 p-2 rounded-lg">
+                                                <span className="text-gray-500 dark:text-slate-400">Invite Code:</span>
+                                                <strong className="text-gray-800 dark:text-white">{league.invite_code}</strong>
+                                                <button onClick={(e) => copyToClipboard(e, league.invite_code)} className="ml-auto p-1 text-gray-500 dark:text-slate-400 hover:text-black dark:hover:text-white relative z-20"><Copy size={16} /></button>
+                                            </div>
                                         </div>
-                                    </div>
-                                    <div className="relative z-10 flex justify-between items-center mt-4 pt-4 border-t border-gray-200 dark:border-slate-800">
-                                        <span className="text-gray-500 dark:text-slate-400 text-sm flex items-center gap-2"><Users size={16} /> {league.league_members.length} Members</span>
-                                        <div className="flex items-center gap-2">
-                                            <Link href={`/leagues/${league.id}/leaderboard`} className="p-2 text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-full" title="View League Leaderboard"><BarChart2 size={16} /></Link>
-                                            {profile?.id === league.admin_id && (
-                                                <button onClick={(e) => handleDeleteLeague(e, league.id)} className="p-2 text-red-500 hover:bg-red-500/10 rounded-full" title="Delete League">
-                                                    <Trash2 size={16} />
-                                                </button>
-                                            )}
+                                        <div className="relative z-20 flex justify-between items-center mt-4 pt-4 border-t border-gray-200 dark:border-slate-800">
+                                            <span className="text-gray-500 dark:text-slate-400 text-sm flex items-center gap-2"><Users size={16} /> {league.league_members.length} Members</span>
+                                            <div className="flex items-center gap-2">
+                                                <Link href={`/leagues/${league.id}/leaderboard`} className="p-2 text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-full" title="View League Leaderboard"><BarChart2 size={16} /></Link>
+                                                {profile?.id === league.admin_id && (
+                                                    <button onClick={(e) => handleDeleteLeague(e, league.id)} className="p-2 text-red-500 hover:bg-red-500/10 rounded-full" title="Delete League">
+                                                        <Trash2 size={16} />
+                                                    </button>
+                                                )}
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
