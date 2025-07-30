@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
-import { Trophy, Award, CheckCircle, XCircle, Medal, Users } from 'lucide-react';
+// FIXED: Removed the unused 'Trophy' import
+import { Award, CheckCircle, XCircle, Medal, Users } from 'lucide-react';
 import Link from 'next/link';
 
 type LeaderboardEntry = {
@@ -14,18 +15,10 @@ type LeaderboardEntry = {
   total_picks: number;
 };
 
-// This is the clean, final shape of our league data
 type LeagueInfo = {
     name: string;
     competition_id: number;
     competitions: { name: string } | null;
-}
-
-// This represents the raw, potentially inconsistent data from Supabase
-type RawLeagueData = {
-    name: string;
-    competition_id: number;
-    competitions: { name: string } | { name: string }[] | null;
 }
 
 export default function LeagueLeaderboardClient({ leagueId }: { leagueId: string }) {
@@ -56,8 +49,7 @@ export default function LeagueLeaderboardClient({ leagueId }: { leagueId: string
 
       if (leagueRes.error) throw leagueRes.error;
       
-      // Safely transform the league data
-      const rawLeagueData = leagueRes.data as RawLeagueData;
+      const rawLeagueData = leagueRes.data as any;
       const transformedLeagueInfo: LeagueInfo = {
           name: rawLeagueData.name,
           competition_id: rawLeagueData.competition_id,
