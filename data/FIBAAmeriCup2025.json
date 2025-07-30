@@ -1,0 +1,56 @@
+{
+  "competition": {
+    "name": "FIBA AmeriCup 2025",
+    "description": "The premier men's basketball tournament in the Americas, hosted in Managua, Nicaragua.",
+    "lock_date": "2025-08-22T23:59:59.000Z",
+    "allow_draws": false
+  },
+  "teams": [
+    { "name": "Argentina", "logo_url": "https://flagcdn.com/w320/ar.png" },
+    { "name": "Bahamas", "logo_url": "https://flagcdn.com/w320/bs.png" },
+    { "name": "Brazil", "logo_url": "https://flagcdn.com/w320/br.png" },
+    { "name": "Canada", "logo_url": "https://flagcdn.com/w320/ca.png" },
+    { "name": "Colombia", "logo_url": "https://flagcdn.com/w320/co.png" },
+    { "name": "Dominican Republic", "logo_url": "https://flagcdn.com/w320/do.png" },
+    { "name": "Nicaragua", "logo_url": "https://flagcdn.com/w320/ni.png" },
+    { "name": "Panama", "logo_url": "https://flagcdn.com/w320/pa.png" },
+    { "name": "Puerto Rico", "logo_url": "https://flagcdn.com/w320/pr.png" },
+    { "name": "Uruguay", "logo_url": "https://flagcdn.com/w320/uy.png" },
+    { "name": "USA", "logo_url": "https://flagcdn.com/w320/us.png" },
+    { "name": "Venezuela", "logo_url": "https://flagcdn.com/w320/ve.png" }
+  ],
+  "team_groupings": [
+    { "team": "USA", "group": "Group A" },
+    { "team": "Dominican Republic", "group": "Group A" },
+    { "team": "Venezuela", "group": "Group A" },
+    { "team": "Panama", "group": "Group A" },
+    { "team": "Argentina", "group": "Group B" },
+    { "team": "Brazil", "group": "Group B" },
+    { "team": "Uruguay", "group": "Group B" },
+    { "team": "Colombia", "group": "Group B" },
+    { "team": "Canada", "group": "Group C" },
+    { "team": "Puerto Rico", "group": "Group C" },
+    { "team": "Bahamas", "group": "Group C" },
+    { "team": "Nicaragua", "group": "Group C" }
+  ],
+  "games": [
+    { "team_a": "USA", "team_b": "Panama", "game_date": "2025-08-23T20:00:00.000Z", "stage": "Group Stage" },
+    { "team_a": "Dominican Republic", "team_b": "Venezuela", "game_date": "2025-08-23T23:00:00.000Z", "stage": "Group Stage" },
+    { "team_a": "Argentina", "team_b": "Colombia", "game_date": "2025-08-24T02:00:00.000Z", "stage": "Group Stage" },
+    { "team_a": "Brazil", "team_b": "Uruguay", "game_date": "2025-08-24T20:00:00.000Z", "stage": "Group Stage" },
+    { "team_a": "Canada", "team_b": "Nicaragua", "game_date": "2025-08-24T23:00:00.000Z", "stage": "Group Stage" },
+    { "team_a": "Puerto Rico", "team_b": "Bahamas", "game_date": "2025-08-25T02:00:00.000Z", "stage": "Group Stage" },
+    { "team_a": "Panama", "team_b": "Dominican Republic", "game_date": "2025-08-25T20:00:00.000Z", "stage": "Group Stage" },
+    { "team_a": "Venezuela", "team_b": "USA", "game_date": "2025-08-25T23:00:00.000Z", "stage": "Group Stage" },
+    { "team_a": "Colombia", "team_b": "Brazil", "game_date": "2025-08-26T02:00:00.000Z", "stage": "Group Stage" },
+    { "team_a": "Uruguay", "team_b": "Argentina", "game_date": "2025-08-26T20:00:00.000Z", "stage": "Group Stage" },
+    { "team_a": "Nicaragua", "team_b": "Puerto Rico", "game_date": "2025-08-26T23:00:00.000Z", "stage": "Group Stage" },
+    { "team_a": "Bahamas", "team_b": "Canada", "game_date": "2025-08-27T02:00:00.000Z", "stage": "Group Stage" },
+    { "team_a": "USA", "team_b": "Dominican Republic", "game_date": "2025-08-27T20:00:00.000Z", "stage": "Group Stage" },
+    { "team_a": "Panama", "team_b": "Venezuela", "game_date": "2025-08-27T23:00:00.000Z", "stage": "Group Stage" },
+    { "team_a": "Argentina", "team_b": "Brazil", "game_date": "2025-08-28T02:00:00.000Z", "stage": "Group Stage" },
+    { "team_a": "Colombia", "team_b": "Uruguay", "game_date": "2025-08-28T20:00:00.000Z", "stage": "Group Stage" },
+    { "team_a": "Canada", "team_b": "Puerto Rico", "game_date": "2025-08-28T23:00:00.000Z", "stage": "Group Stage" },
+    { "team_a": "Nicaragua", "team_b": "Bahamas", "game_date": "2025-08-29T02:00:00.000Z", "stage": "Group Stage" }
+  ]
+}

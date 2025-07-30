@@ -1,52 +1,32 @@
+/*
+================================================================================
+File: app/competitions/[id]/CompetitionDetailClient.tsx (Updated for Leagues)
+================================================================================
+This version is now "league-aware". It reads the leagueId from the URL to
+create the correct leaderboard link.
+*/
+
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
-// FIXED: Removed the unused 'XCircle' import
-import { Trophy, Clock, Calendar, CheckCircle, BarChart2, Info, HelpCircle } from 'lucide-react';
+import { Trophy, Clock, Calendar, CheckCircle, BarChart2, Info, HelpCircle, Users, XCircle } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 
 // --- Type Definitions ---
-
-type Competition = {
-  id: number;
-  name: string;
-  description: string | null;
-  lock_date: string;
-  allow_draws: boolean;
-};
-
-type Team = {
-  id: number;
-  name: string;
-  logo_url: string | null;
-};
-
-type Game = {
-  id: number;
-  game_date: string;
-  stage: string | null;
-  group: string | null;
-  team_a: Team | null;
-  team_b: Team | null;
-  winning_team_id: number | null;
-  is_draw: boolean;
-};
-
-type PropPrediction = {
-  id: number;
-  question: string;
-  lock_date: string;
-  correct_answer: string | null;
-};
-
+type Competition = { id: number; name: string; description: string | null; lock_date: string; allow_draws: boolean; };
+type Team = { id: number; name: string; logo_url: string | null; };
+type Game = { id: number; game_date: string; stage: string | null; group: string | null; team_a: Team | null; team_b: Team | null; winning_team_id: number | null; is_draw: boolean; };
+type PropPrediction = { id: number; question: string; lock_date: string; correct_answer: string | null; };
 type Event = (Game & { type: 'game' }) | (PropPrediction & { type: 'prop' });
+type League = { id: string; name: string; };
 
 // --- Main Page Component ---
-
 export default function CompetitionDetailClient({ id }: { id: string }) {
   const [competition, setCompetition] = useState<Competition | null>(null);
+  const [league, setLeague] = useState<League | null>(null);
   const [groupedEvents, setGroupedEvents] = useState<{ [key: string]: Event[] }>({});
   const [picks, setPicks] = useState<{ [key: string]: string }>({});
   const [loading, setLoading] = useState(true);
@@ -56,6 +36,15 @@ export default function CompetitionDetailClient({ id }: { id: string }) {
   const [userId, setUserId] = useState<string | null>(null);
 
   const competitionId = parseInt(id, 10);
+  
+  // Get the search params from the URL to read the leagueId
+  const searchParams = useSearchParams();
+  const leagueId = searchParams.get('leagueId');
+
+  // Dynamically create the correct leaderboard URL
+  const leaderboardUrl = leagueId 
+    ? `/leagues/${leagueId}/leaderboard` 
+    : `/competitions/${competitionId}/leaderboard`;
 
   const isLocked = (lockDate: string) => new Date(lockDate) < new Date();
 
@@ -63,53 +52,45 @@ export default function CompetitionDetailClient({ id }: { id: string }) {
     setLoading(true);
     setError(null);
     try {
-      const [competitionRes, gamesRes, groupingsRes, propPredictionsRes, picksRes] = await Promise.all([
+      if (leagueId) {
+        const { data: leagueData, error: leagueError } = await supabase.from('leagues').select('id, name').eq('id', leagueId).single();
+        if (leagueError) throw leagueError;
+        setLeague(leagueData);
+      }
+
+      const [competitionRes, gamesRes, groupingsRes, propPredictionsRes] = await Promise.all([
         supabase.from('competitions').select('*').eq('id', competitionId).single(),
         supabase.from('games').select('*, team_a:teams!games_team_a_id_fkey(*), team_b:teams!games_team_b_id_fkey(*)').eq('competition_id', competitionId),
         supabase.from('competition_teams').select('team_id, group').eq('competition_id', competitionId),
         supabase.from('prop_predictions').select('*').eq('competition_id', competitionId),
-        supabase.from('user_picks').select('game_id, prop_prediction_id, pick').eq('user_id', currentUserId).eq('competition_id', competitionId),
       ]);
 
       if (competitionRes.error) throw competitionRes.error;
       setCompetition(competitionRes.data);
 
-      if (gamesRes.error) throw gamesRes.error;
-      if (groupingsRes.error) throw groupingsRes.error;
-      if (propPredictionsRes.error) throw propPredictionsRes.error;
+      let picksQuery = supabase.from('user_picks').select('game_id, prop_prediction_id, pick').eq('user_id', currentUserId).eq('competition_id', competitionId);
+      if (leagueId) {
+        picksQuery = picksQuery.eq('league_id', leagueId);
+      } else {
+        picksQuery = picksQuery.is('league_id', null);
+      }
+      const { data: picksData, error: picksError } = await picksQuery;
+      if (picksError) throw picksError;
 
-      const groupMap = groupingsRes.data.reduce((acc, item) => {
-          acc[item.team_id] = item.group;
-          return acc;
-      }, {} as { [key: number]: string });
-
-      const gamesWithGroups: Event[] = gamesRes.data.map(game => ({
-          ...game,
-          group: game.team_a ? groupMap[game.team_a.id] : null,
-          type: 'game'
-      }));
-
-      const propsWithType: Event[] = propPredictionsRes.data.map(p => ({ ...p, type: 'prop' }));
-
-      const allEvents = [...gamesWithGroups, ...propsWithType].sort((a, b) => {
-        const dateA = new Date(a.type === 'game' ? a.game_date : a.lock_date);
-        const dateB = new Date(b.type === 'game' ? b.game_date : b.lock_date);
-        return dateA.getTime() - dateB.getTime();
-      });
-
+      const groupMap = groupingsRes.data!.reduce((acc, item) => { acc[item.team_id] = item.group; return acc; }, {} as { [key: number]: string });
+      const gamesWithGroups: Event[] = gamesRes.data!.map(game => ({ ...game, group: game.team_a ? groupMap[game.team_a.id] : null, type: 'game' }));
+      const propsWithType: Event[] = propPredictionsRes.data!.map(p => ({ ...p, type: 'prop' }));
+      const allEvents = [...gamesWithGroups, ...propsWithType].sort((a, b) => new Date(a.type === 'game' ? a.game_date : a.lock_date).getTime() - new Date(b.type === 'game' ? b.game_date : b.lock_date).getTime());
       const eventsByDate = allEvents.reduce((acc, event) => {
         const dateStr = event.type === 'game' ? event.game_date : event.lock_date;
-        const date = new Date(dateStr).toLocaleDateString(undefined, {
-            weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
-        });
+        const date = new Date(dateStr).toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
         if (!acc[date]) { acc[date] = []; }
         acc[date].push(event);
         return acc;
       }, {} as { [key: string]: Event[] });
       setGroupedEvents(eventsByDate);
       
-      if (picksRes.error) throw picksRes.error;
-      const existingPicks = picksRes.data.reduce((acc, pick) => {
+      const existingPicks = picksData.reduce((acc, pick) => {
         const key = pick.game_id ? `game_${pick.game_id}` : `prop_${pick.prop_prediction_id}`;
         acc[key] = pick.pick;
         return acc;
@@ -119,11 +100,10 @@ export default function CompetitionDetailClient({ id }: { id: string }) {
     } catch (err) {
       if (err instanceof Error) { setError(err.message); } 
       else { setError("An unknown error occurred"); }
-      console.error("Error fetching data:", err);
     } finally {
       setLoading(false);
     }
-  }, [competitionId]);
+  }, [competitionId, leagueId]);
 
   useEffect(() => {
     const getAndSetUser = async () => {
@@ -145,10 +125,7 @@ export default function CompetitionDetailClient({ id }: { id: string }) {
   };
 
   const handleSubmitPicks = async () => {
-    if (!userId) {
-      setError("User not found. Please log in again.");
-      return;
-    }
+    if (!userId) { setError("User not found."); return; }
     setSubmitting(true);
     setError(null);
     setSuccess(null);
@@ -158,17 +135,14 @@ export default function CompetitionDetailClient({ id }: { id: string }) {
       return {
         user_id: userId,
         competition_id: competitionId,
+        league_id: leagueId || null,
         game_id: type === 'game' ? parseInt(id) : null,
         prop_prediction_id: type === 'prop' ? parseInt(id) : null,
         pick: pick,
       };
     });
 
-    if (allPicks.length === 0) {
-        setError("You haven't made any picks.");
-        setSubmitting(false);
-        return;
-    }
+    if (allPicks.length === 0) { setError("You haven't made any picks."); setSubmitting(false); return; }
 
     const gamePicks = allPicks.filter(p => p.game_id !== null);
     const propPicks = allPicks.filter(p => p.prop_prediction_id !== null);
@@ -176,14 +150,14 @@ export default function CompetitionDetailClient({ id }: { id: string }) {
     try {
       if (gamePicks.length > 0) {
         const { error: gameUpsertError } = await supabase.from('user_picks').upsert(gamePicks, {
-          onConflict: 'user_id, game_id',
+          onConflict: leagueId ? 'user_id, game_id, league_id' : 'user_id, game_id',
         });
         if (gameUpsertError) throw gameUpsertError;
       }
 
       if (propPicks.length > 0) {
         const { error: propUpsertError } = await supabase.from('user_picks').upsert(propPicks, {
-          onConflict: 'user_id, prop_prediction_id',
+          onConflict: leagueId ? 'user_id, prop_prediction_id, league_id' : 'user_id, prop_prediction_id',
         });
         if (propUpsertError) throw propUpsertError;
       }
@@ -192,44 +166,35 @@ export default function CompetitionDetailClient({ id }: { id: string }) {
       setTimeout(() => setSuccess(null), 3000);
 
     } catch (upsertError) {
-      if (upsertError instanceof Error) {
-        setError(upsertError.message);
-      } else {
-        setError("An unknown error occurred while saving picks.");
-      }
+      if (upsertError instanceof Error) { setError(upsertError.message); } 
+      else { setError("An unknown error occurred while saving picks."); }
     } finally {
       setSubmitting(false);
     }
   };
 
-  if (loading) { return <div className="text-center p-10">Loading competition...</div>; }
+  if (loading) { return <div className="text-center p-10">Loading...</div>; }
   if (error) { return <div className="text-center p-10 text-red-500">Error: {error}</div>; }
   if (!competition) { return <div className="text-center p-10">Competition not found.</div>; }
 
   return (
     <div>
-      <div className="bg-white dark:bg-gray-900 p-6 rounded-lg border border-gray-200 dark:border-gray-800 mb-8">
+      <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-gray-200 dark:border-slate-800 mb-8">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-2">
             <div className="flex items-center">
-              <Trophy className="w-8 h-8 mr-4 text-blue-500" />
-              <h1 className="text-4xl font-bold">{competition.name}</h1>
+              <Trophy className="w-8 h-8 mr-4 text-blue-500 dark:text-violet-400" />
+              <div>
+                <h1 className="text-4xl font-bold">{competition.name}</h1>
+                {league && <p className="text-lg text-slate-400 flex items-center gap-2"><Users size={16}/> Playing in league: <strong>{league.name}</strong></p>}
+              </div>
             </div>
             <Link 
-              href={`/competitions/${competitionId}/leaderboard`}
-              className="mt-4 sm:mt-0 inline-flex items-center justify-center px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600 font-semibold transition-colors"
+              href={leaderboardUrl}
+              className="mt-4 sm:mt-0 inline-flex items-center justify-center px-4 py-2 bg-gray-200 dark:bg-slate-800 border border-gray-300 dark:border-slate-700 text-gray-800 dark:text-slate-300 rounded-full hover:bg-gray-300 dark:hover:bg-slate-700 transition-colors"
             >
                 <BarChart2 className="w-5 h-5 mr-2" />
                 View Leaderboard
             </Link>
-        </div>
-        <p className="text-gray-600 dark:text-gray-400 sm:ml-12">{competition.description}</p>
-        
-        <div className="mt-4 sm:ml-12 p-4 bg-blue-50 dark:bg-blue-900/30 border-l-4 border-blue-500 rounded-r-lg flex items-start">
-            <Info className="w-5 h-5 mr-3 mt-1 text-blue-500 flex-shrink-0" />
-            <div>
-                <h4 className="font-bold text-blue-800 dark:text-blue-300">A Note on Predictions</h4>
-                <p className="text-sm text-blue-700 dark:text-blue-400 mt-1">You can change your picks for any game as many times as you like until the scheduled start time of that specific game. Once a game begins, its prediction is locked permanently.</p>
-            </div>
         </div>
       </div>
 
@@ -283,7 +248,6 @@ export default function CompetitionDetailClient({ id }: { id: string }) {
                           </button>
                       </div>
                       {hasResult && <p className="text-xs text-gray-400 mt-2 text-center">Correct Answer: {prop.correct_answer}</p>}
-                      {isLocked(prop.lock_date) && !hasResult && <p className="text-xs text-gray-400 mt-2 text-center">Result pending...</p>}
                     </div>
                   )
                 }
@@ -339,7 +303,6 @@ export default function CompetitionDetailClient({ id }: { id: string }) {
                       </button>
                     </div>
                     {hasResult && <p className="text-xs text-gray-400 mt-2 text-center">Correct Answer: {game.is_draw ? 'Draw' : (game.winning_team_id === game.team_a?.id ? game.team_a.name : game.team_b?.name)}</p>}
-                    {isLocked(game.game_date) && !hasResult && <p className="text-xs text-gray-400 mt-2 text-center">Result pending...</p>}
                   </div>
                 )
               })}
@@ -348,7 +311,7 @@ export default function CompetitionDetailClient({ id }: { id: string }) {
         ))}
       </div>
       
-      <div className="mt-8 p-4 bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 shadow-lg sticky bottom-4 flex items-center justify-between">
+      <div className="mt-8 p-4 bg-white dark:bg-slate-900 rounded-lg border border-gray-200 dark:border-slate-800 shadow-lg sticky bottom-4 flex items-center justify-between">
         <div>
             {success && <p className="text-green-600 font-semibold">{success}</p>}
             {error && <p className="text-red-600 font-semibold">{error}</p>}
