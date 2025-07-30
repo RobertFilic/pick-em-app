@@ -10,7 +10,8 @@ by separating the save operations for games and special events.
 
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
-import { Trophy, Clock, Calendar, CheckCircle, BarChart2, HelpCircle, Users, XCircle } from 'lucide-react';
+// FIXED: Removed the unused 'XCircle' import
+import { Trophy, Clock, Calendar, CheckCircle, BarChart2, HelpCircle, Users } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
