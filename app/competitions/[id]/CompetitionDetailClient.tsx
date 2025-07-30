@@ -145,7 +145,6 @@ export default function CompetitionDetailClient({ id }: { id: string }) {
 
     try {
       if (gamePicks.length > 0) {
-        // FIXED: Use the correct constraint name for the onConflict parameter
         const { error: gameUpsertError } = await supabase.from('user_picks').upsert(gamePicks, {
           onConflict: leagueId ? 'user_picks_league_game_unique_idx' : 'user_picks_public_game_unique_idx',
         });
@@ -153,7 +152,6 @@ export default function CompetitionDetailClient({ id }: { id: string }) {
       }
 
       if (propPicks.length > 0) {
-        // FIXED: Use the correct constraint name for the onConflict parameter
         const { error: propUpsertError } = await supabase.from('user_picks').upsert(propPicks, {
           onConflict: leagueId ? 'user_picks_league_prop_unique_idx' : 'user_picks_public_prop_unique_idx',
         });
