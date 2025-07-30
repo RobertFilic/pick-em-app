@@ -227,6 +227,12 @@ function UnifiedDashboard({ user }: { user: User }) {
         });
     };
 
+    // FIXED: New handler for leaderboard navigation
+    const handleViewLeaderboard = (e: React.MouseEvent, leagueId: string) => {
+        e.stopPropagation(); // This is the crucial part
+        router.push(`/leagues/${leagueId}/leaderboard`);
+    };
+
     if (loading || !profile) {
         return <div className="min-h-screen flex items-center justify-center text-white">Loading Dashboard...</div>;
     }
@@ -277,7 +283,8 @@ function UnifiedDashboard({ user }: { user: User }) {
                                         <div className="relative z-20 flex justify-between items-center mt-4 pt-4 border-t border-gray-200 dark:border-slate-800">
                                             <span className="text-gray-500 dark:text-slate-400 text-sm flex items-center gap-2"><Users size={16} /> {league.league_members.length} Members</span>
                                             <div className="flex items-center gap-2">
-                                                <Link href={`/leagues/${league.id}/leaderboard`} className="p-2 text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-full" title="View League Leaderboard"><BarChart2 size={16} /></Link>
+                                                {/* FIXED: Changed Link to a button with an onClick handler */}
+                                                <button onClick={(e) => handleViewLeaderboard(e, league.id)} className="p-2 text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-full" title="View League Leaderboard"><BarChart2 size={16} /></button>
                                                 {profile?.id === league.admin_id && (
                                                     <button onClick={(e) => handleDeleteLeague(e, league.id)} className="p-2 text-red-500 hover:bg-red-500/10 rounded-full" title="Delete League">
                                                         <Trash2 size={16} />
