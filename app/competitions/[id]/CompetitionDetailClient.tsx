@@ -3,14 +3,13 @@
 File: app/competitions/[id]/CompetitionDetailClient.tsx (Save Picks Fix)
 ================================================================================
 This version fixes the bug that prevented saving picks in a private league
-by separating the save operations for games and special events.
+by using the correct 'onConflict' constraint names in the upsert operation.
 */
 
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
-// FIXED: Removed the unused 'XCircle' import
 import { Trophy, Clock, Calendar, CheckCircle, BarChart2, HelpCircle, Users } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -146,15 +145,17 @@ export default function CompetitionDetailClient({ id }: { id: string }) {
 
     try {
       if (gamePicks.length > 0) {
+        // FIXED: Use the correct constraint name for the onConflict parameter
         const { error: gameUpsertError } = await supabase.from('user_picks').upsert(gamePicks, {
-          onConflict: leagueId ? 'user_id, game_id, league_id' : 'user_id, game_id',
+          onConflict: leagueId ? 'user_picks_league_game_unique_idx' : 'user_picks_public_game_unique_idx',
         });
         if (gameUpsertError) throw gameUpsertError;
       }
 
       if (propPicks.length > 0) {
+        // FIXED: Use the correct constraint name for the onConflict parameter
         const { error: propUpsertError } = await supabase.from('user_picks').upsert(propPicks, {
-          onConflict: leagueId ? 'user_id, prop_prediction_id, league_id' : 'user_id, prop_prediction_id',
+          onConflict: leagueId ? 'user_picks_league_prop_unique_idx' : 'user_picks_public_prop_unique_idx',
         });
         if (propUpsertError) throw propUpsertError;
       }
