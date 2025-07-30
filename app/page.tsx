@@ -1,10 +1,9 @@
 /*
 ================================================================================
-File: app/page.tsx (New Unified Dashboard)
+File: app/page.tsx (Updated with Correct League Links)
 ================================================================================
-This component combines the public competitions list and the private leagues
-manager into a single, unified dashboard for logged-in users. It also
-conditionally renders the LandingPage if the user is not logged in.
+This version updates the private league cards to link to both the competition
+page for making picks and the new league-specific leaderboard page.
 */
 
 'use client';
@@ -14,7 +13,7 @@ import { supabase } from '@/lib/supabaseClient';
 import type { User } from '@supabase/supabase-js';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Trophy, ArrowRight, Plus, Users, Trash2, Copy, X, LogOut } from 'lucide-react';
+import { Trophy, ArrowRight, Plus, Users, Trash2, Copy, X, LogOut, BarChart2 } from 'lucide-react';
 import LandingPage from './LandingPage';
 
 // --- Type Definitions ---
@@ -217,7 +216,7 @@ function UnifiedDashboard({ user }: { user: User }) {
     };
     
     const handleDeleteLeague = async (e: React.MouseEvent, leagueId: string) => {
-        e.stopPropagation(); // Prevent the link from being followed
+        e.stopPropagation();
         if (window.confirm("Are you sure you want to permanently delete this league? This cannot be undone.")) {
             const { error } = await supabase.from('leagues').delete().eq('id', leagueId);
             if(error) {
@@ -230,7 +229,7 @@ function UnifiedDashboard({ user }: { user: User }) {
     };
     
     const copyToClipboard = (e: React.MouseEvent, text: string) => {
-        e.stopPropagation(); // Prevent the link from being followed
+        e.stopPropagation();
         navigator.clipboard.writeText(text).then(() => {
             showNotification("Invite code copied to clipboard!", 'success');
         }, () => {
@@ -244,14 +243,12 @@ function UnifiedDashboard({ user }: { user: User }) {
 
     return (
         <>
-            {/* Notification Popup */}
             {notification && (
                 <div className={`fixed top-5 right-5 p-4 rounded-lg shadow-lg z-[1001] text-white ${notification.type === 'success' ? 'bg-green-500/80' : 'bg-red-500/80'}`}>
                     {notification.message}
                 </div>
             )}
 
-            {/* Main Dashboard Content */}
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 text-black dark:text-white">
                 <header className="flex justify-between items-center mb-10 flex-wrap gap-4">
                     <h1 className="text-4xl font-bold">Welcome, {profile.username}</h1>
@@ -260,7 +257,6 @@ function UnifiedDashboard({ user }: { user: User }) {
                     </button>
                 </header>
 
-                {/* Private Leagues Section */}
                 <section className="mb-12">
                     <div className="flex justify-between items-center mb-6 flex-wrap gap-4">
                         <h2 className="text-3xl font-bold flex items-center gap-3"><Users /> My Private Leagues</h2>
@@ -276,27 +272,29 @@ function UnifiedDashboard({ user }: { user: User }) {
                     {leagues.length > 0 ? (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                             {leagues.map(league => (
-                                <Link key={league.id} href={`/competitions/${league.competition_id}`} className="group block">
-                                    <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-gray-200 dark:border-slate-800 flex flex-col justify-between h-full group-hover:border-blue-500 dark:group-hover:border-violet-500 transition-all">
-                                        <div>
-                                            <h3 className="text-xl font-bold text-blue-600 dark:text-violet-400 mb-1">{league.name}</h3>
-                                            <p className="text-gray-600 dark:text-slate-400 mb-4 text-sm">Competition: {league.competitions?.name || 'N/A'}</p>
-                                            <div className="flex items-center gap-2 text-sm bg-gray-100 dark:bg-slate-800 p-2 rounded-lg">
-                                                <span className="text-gray-500 dark:text-slate-400">Invite Code:</span>
-                                                <strong className="text-gray-800 dark:text-white">{league.invite_code}</strong>
-                                                <Copy size={16} onClick={(e) => copyToClipboard(e, league.invite_code)} className="cursor-pointer text-gray-500 dark:text-slate-400 hover:text-black dark:hover:text-white" />
-                                            </div>
+                                <div key={league.id} className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-gray-200 dark:border-slate-800 flex flex-col justify-between">
+                                    <div>
+                                        <h3 className="text-xl font-bold text-blue-600 dark:text-violet-400 mb-1">{league.name}</h3>
+                                        <p className="text-gray-600 dark:text-slate-400 mb-4 text-sm">Competition: {league.competitions?.name || 'N/A'}</p>
+                                        <div className="flex items-center gap-2 text-sm bg-gray-100 dark:bg-slate-800 p-2 rounded-lg">
+                                            <span className="text-gray-500 dark:text-slate-400">Invite Code:</span>
+                                            <strong className="text-gray-800 dark:text-white">{league.invite_code}</strong>
+                                            <Copy size={16} onClick={(e) => copyToClipboard(e, league.invite_code)} className="cursor-pointer text-gray-500 dark:text-slate-400 hover:text-black dark:hover:text-white" />
                                         </div>
-                                        <div className="flex justify-between items-center mt-4 pt-4 border-t border-gray-200 dark:border-slate-800">
-                                            <span className="text-gray-500 dark:text-slate-400 text-sm flex items-center gap-2"><Users size={16} /> {league.league_members.length} Members</span>
+                                    </div>
+                                    <div className="flex justify-between items-center mt-4 pt-4 border-t border-gray-200 dark:border-slate-800">
+                                        <span className="text-gray-500 dark:text-slate-400 text-sm flex items-center gap-2"><Users size={16} /> {league.league_members.length} Members</span>
+                                        <div className="flex items-center gap-2">
+                                            <Link href={`/leagues/${league.id}/leaderboard`} className="p-2 text-slate-400 hover:bg-slate-800 rounded-full" title="View League Leaderboard"><BarChart2 size={16} /></Link>
+                                            <Link href={`/competitions/${league.competition_id}`} className="p-2 text-slate-400 hover:bg-slate-800 rounded-full" title="Make Picks"><ArrowRight size={16} /></Link>
                                             {profile?.id === league.admin_id && (
-                                                <button onClick={(e) => handleDeleteLeague(e, league.id)} className="p-2 text-red-500 hover:bg-red-500/10 rounded-full">
+                                                <button onClick={(e) => handleDeleteLeague(e, league.id)} className="p-2 text-red-500 hover:bg-red-500/10 rounded-full" title="Delete League">
                                                     <Trash2 size={16} />
                                                 </button>
                                             )}
                                         </div>
                                     </div>
-                                </Link>
+                                </div>
                             ))}
                         </div>
                     ) : (
@@ -306,7 +304,6 @@ function UnifiedDashboard({ user }: { user: User }) {
                     )}
                 </section>
 
-                {/* Public Competitions Section */}
                 <section>
                     <h2 className="text-3xl font-bold mb-6 flex items-center gap-3"><Trophy /> Public Competitions</h2>
                     <div className="space-y-4">
@@ -319,7 +316,6 @@ function UnifiedDashboard({ user }: { user: User }) {
                     </div>
                 </section>
 
-                {/* Create League Modal */}
                 {showCreateModal && (
                     <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-[1000]">
                         <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-8 rounded-2xl w-full max-w-md relative">
@@ -345,7 +341,6 @@ function UnifiedDashboard({ user }: { user: User }) {
                     </div>
                 )}
 
-                {/* Join League Modal */}
                 {showJoinModal && (
                      <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-[1000]">
                         <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-8 rounded-2xl w-full max-w-md relative">
