@@ -216,7 +216,8 @@ function UnifiedDashboard({ user }: { user: User }) {
         setIsSubmitting(false);
     };
     
-    const handleDeleteLeague = async (leagueId: string) => {
+    const handleDeleteLeague = async (e: React.MouseEvent, leagueId: string) => {
+        e.stopPropagation(); // Prevent the link from being followed
         if (window.confirm("Are you sure you want to permanently delete this league? This cannot be undone.")) {
             const { error } = await supabase.from('leagues').delete().eq('id', leagueId);
             if(error) {
@@ -228,7 +229,8 @@ function UnifiedDashboard({ user }: { user: User }) {
         }
     };
     
-    const copyToClipboard = (text: string) => {
+    const copyToClipboard = (e: React.MouseEvent, text: string) => {
+        e.stopPropagation(); // Prevent the link from being followed
         navigator.clipboard.writeText(text).then(() => {
             showNotification("Invite code copied to clipboard!", 'success');
         }, () => {
@@ -274,25 +276,27 @@ function UnifiedDashboard({ user }: { user: User }) {
                     {leagues.length > 0 ? (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                             {leagues.map(league => (
-                                <div key={league.id} className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-gray-200 dark:border-slate-800 flex flex-col justify-between">
-                                    <div>
-                                        <h3 className="text-xl font-bold text-blue-600 dark:text-violet-400 mb-1">{league.name}</h3>
-                                        <p className="text-gray-600 dark:text-slate-400 mb-4 text-sm">Competition: {league.competitions?.name || 'N/A'}</p>
-                                        <div className="flex items-center gap-2 text-sm bg-gray-100 dark:bg-slate-800 p-2 rounded-lg">
-                                            <span className="text-gray-500 dark:text-slate-400">Invite Code:</span>
-                                            <strong className="text-gray-800 dark:text-white">{league.invite_code}</strong>
-                                            <Copy size={16} onClick={() => copyToClipboard(league.invite_code)} className="cursor-pointer text-gray-500 dark:text-slate-400 hover:text-black dark:hover:text-white" />
+                                <Link key={league.id} href={`/competitions/${league.competition_id}`} className="group block">
+                                    <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-gray-200 dark:border-slate-800 flex flex-col justify-between h-full group-hover:border-blue-500 dark:group-hover:border-violet-500 transition-all">
+                                        <div>
+                                            <h3 className="text-xl font-bold text-blue-600 dark:text-violet-400 mb-1">{league.name}</h3>
+                                            <p className="text-gray-600 dark:text-slate-400 mb-4 text-sm">Competition: {league.competitions?.name || 'N/A'}</p>
+                                            <div className="flex items-center gap-2 text-sm bg-gray-100 dark:bg-slate-800 p-2 rounded-lg">
+                                                <span className="text-gray-500 dark:text-slate-400">Invite Code:</span>
+                                                <strong className="text-gray-800 dark:text-white">{league.invite_code}</strong>
+                                                <Copy size={16} onClick={(e) => copyToClipboard(e, league.invite_code)} className="cursor-pointer text-gray-500 dark:text-slate-400 hover:text-black dark:hover:text-white" />
+                                            </div>
+                                        </div>
+                                        <div className="flex justify-between items-center mt-4 pt-4 border-t border-gray-200 dark:border-slate-800">
+                                            <span className="text-gray-500 dark:text-slate-400 text-sm flex items-center gap-2"><Users size={16} /> {league.league_members.length} Members</span>
+                                            {profile?.id === league.admin_id && (
+                                                <button onClick={(e) => handleDeleteLeague(e, league.id)} className="p-2 text-red-500 hover:bg-red-500/10 rounded-full">
+                                                    <Trash2 size={16} />
+                                                </button>
+                                            )}
                                         </div>
                                     </div>
-                                    <div className="flex justify-between items-center mt-4 pt-4 border-t border-gray-200 dark:border-slate-800">
-                                        <span className="text-gray-500 dark:text-slate-400 text-sm flex items-center gap-2"><Users size={16} /> {league.league_members.length} Members</span>
-                                        {profile?.id === league.admin_id && (
-                                            <button onClick={() => handleDeleteLeague(league.id)} className="p-2 text-red-500 hover:bg-red-500/10 rounded-full">
-                                                <Trash2 size={16} />
-                                            </button>
-                                        )}
-                                    </div>
-                                </div>
+                                </Link>
                             ))}
                         </div>
                     ) : (
