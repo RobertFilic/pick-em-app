@@ -3,7 +3,7 @@
 File: app/competitions/[id]/CompetitionDetailClient.tsx (Save Picks Fix)
 ================================================================================
 This version fixes the bug that prevented saving picks in a private league
-by using the correct 'onConflict' constraint names in the upsert operation.
+by using the correct column names in the 'onConflict' parameter.
 */
 
 'use client';
@@ -146,14 +146,16 @@ export default function CompetitionDetailClient({ id }: { id: string }) {
     try {
       if (gamePicks.length > 0) {
         const { error: gameUpsertError } = await supabase.from('user_picks').upsert(gamePicks, {
-          onConflict: leagueId ? 'user_picks_league_game_unique_idx' : 'user_picks_public_game_unique_idx',
+          // FIXED: Use the column names for the constraint, not the index name.
+          onConflict: leagueId ? 'user_id, game_id, league_id' : 'user_id, game_id',
         });
         if (gameUpsertError) throw gameUpsertError;
       }
 
       if (propPicks.length > 0) {
         const { error: propUpsertError } = await supabase.from('user_picks').upsert(propPicks, {
-          onConflict: leagueId ? 'user_picks_league_prop_unique_idx' : 'user_picks_public_prop_unique_idx',
+          // FIXED: Use the column names for the constraint, not the index name.
+          onConflict: leagueId ? 'user_id, prop_prediction_id, league_id' : 'user_id, prop_prediction_id',
         });
         if (propUpsertError) throw propUpsertError;
       }
