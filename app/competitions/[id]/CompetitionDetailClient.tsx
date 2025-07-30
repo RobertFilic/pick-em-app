@@ -9,16 +9,46 @@ This version now displays the results of a user's predictions for completed game
 
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
-import { Trophy, Clock, Calendar, CheckCircle, BarChart2, HelpCircle, Users, XCircle } from 'lucide-react';
+// FIXED: Removed the unused 'XCircle' and 'Info' imports
+import { Trophy, Clock, Calendar, CheckCircle, BarChart2, HelpCircle, Users } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 
 // --- Type Definitions ---
-type Competition = { id: number; name: string; description: string | null; lock_date: string; allow_draws: boolean; };
-type Team = { id: number; name: string; logo_url: string | null; };
-type Game = { id: number; game_date: string; stage: string | null; group: string | null; team_a: Team | null; team_b: Team | null; winning_team_id: number | null; is_draw: boolean; };
-type PropPrediction = { id: number; question: string; lock_date: string; correct_answer: string | null; };
+
+type Competition = {
+  id: number;
+  name: string;
+  description: string | null;
+  lock_date: string;
+  allow_draws: boolean;
+};
+
+type Team = {
+  id: number;
+  name: string;
+  logo_url: string | null;
+};
+
+type Game = {
+  id: number;
+  game_date: string;
+  stage: string | null;
+  group: string | null;
+  team_a: Team | null;
+  team_b: Team | null;
+  winning_team_id: number | null;
+  is_draw: boolean;
+};
+
+type PropPrediction = {
+  id: number;
+  question: string;
+  lock_date: string;
+  correct_answer: string | null;
+};
+
 type Event = (Game & { type: 'game' }) | (PropPrediction & { type: 'prop' });
 type League = { id: string; name: string; };
 
@@ -180,7 +210,6 @@ export default function CompetitionDetailClient({ id }: { id: string }) {
               <Trophy className="w-8 h-8 mr-4 text-blue-500 dark:text-violet-400" />
               <div>
                 <h1 className="text-4xl font-bold">{competition.name}</h1>
-                {/* FIXED: Changed from && to a ternary operator to satisfy stricter linters */}
                 {league ? (
                   <p className="text-lg text-slate-400 flex items-center gap-2">
                     <Users size={16}/> Playing in league: <strong>{league.name}</strong>
