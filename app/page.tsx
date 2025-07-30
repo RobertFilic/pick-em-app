@@ -1,9 +1,10 @@
 /*
 ================================================================================
-File: app/page.tsx (Updated with Clickable League Cards)
+File: app/page.tsx (Updated with Correct League Links)
 ================================================================================
-This version makes the entire private league card a clickable link to the
-competition page, while ensuring the action buttons inside still work correctly.
+This version updates the private league cards to link to the competition page
+with the correct leagueId in the URL, which is crucial for making
+league-specific predictions.
 */
 
 'use client';
@@ -227,10 +228,6 @@ function UnifiedDashboard({ user }: { user: User }) {
         });
     };
 
-    const handleCardClick = (path: string) => {
-        router.push(path);
-    };
-
     if (loading || !profile) {
         return <div className="min-h-screen flex items-center justify-center text-white">Loading Dashboard...</div>;
     }
@@ -266,11 +263,7 @@ function UnifiedDashboard({ user }: { user: User }) {
                     {leagues.length > 0 ? (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                             {leagues.map(league => (
-                                <div 
-                                    key={league.id} 
-                                    onClick={() => handleCardClick(`/competitions/${league.competition_id}`)}
-                                    className="cursor-pointer bg-white dark:bg-slate-900 p-6 rounded-2xl border border-gray-200 dark:border-slate-800 flex flex-col justify-between hover:border-blue-500 dark:hover:border-violet-500 transition-all group"
-                                >
+                                <Link key={league.id} href={`/competitions/${league.competition_id}?leagueId=${league.id}`} className="group block bg-white dark:bg-slate-900 p-6 rounded-2xl border border-gray-200 dark:border-slate-800 hover:border-blue-500 dark:hover:border-violet-500 transition-all">
                                     <div className="flex flex-col h-full">
                                         <div className="flex-grow">
                                             <h3 className="text-xl font-bold text-blue-600 dark:text-violet-400 mb-1">{league.name}</h3>
@@ -286,19 +279,17 @@ function UnifiedDashboard({ user }: { user: User }) {
                                             <div className="flex items-center gap-2">
                                                 <Link href={`/leagues/${league.id}/leaderboard`} onClick={(e) => e.stopPropagation()} className="p-2 text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-full" title="View League Leaderboard"><BarChart2 size={16} /></Link>
                                                 {profile?.id === league.admin_id && (
-                                                    <button onClick={(e) => handleDeleteLeague(e, league.id)} className="p-2 text-red-500 hover:bg-red-500/10 rounded-full" title="Delete League">
-                                                        <Trash2 size={16} />
-                                                    </button>
+                                                    <button onClick={(e) => handleDeleteLeague(e, league.id)} className="p-2 text-red-500 hover:bg-red-500/10 rounded-full" title="Delete League"><Trash2 size={16} /></button>
                                                 )}
                                             </div>
                                         </div>
                                     </div>
-                                </div>
+                                </Link>
                             ))}
                         </div>
                     ) : (
                         <div className="text-center py-10 bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-slate-800">
-                            <p className="text-gray-500 dark:text-slate-400">You haven&apos;t joined any private leagues yet. Create one or join with an invite code!</p>
+                            <p className="text-gray-500 dark:text-slate-400">You haven&apos;t joined any private leagues yet.</p>
                         </div>
                     )}
                 </section>
