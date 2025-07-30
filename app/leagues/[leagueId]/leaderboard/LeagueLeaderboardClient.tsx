@@ -21,6 +21,14 @@ type LeagueInfo = {
     competitions: { name: string } | null;
 }
 
+// This type represents the raw, potentially inconsistent data from Supabase
+type RawLeagueData = {
+    name: string;
+    competition_id: number;
+    competitions: { name: string } | { name: string }[] | null;
+}
+
+
 export default function LeagueLeaderboardClient({ leagueId }: { leagueId: string }) {
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [leagueInfo, setLeagueInfo] = useState<LeagueInfo | null>(null);
@@ -49,7 +57,8 @@ export default function LeagueLeaderboardClient({ leagueId }: { leagueId: string
 
       if (leagueRes.error) throw leagueRes.error;
       
-      const rawLeagueData = leagueRes.data as any;
+      // FIXED: Replaced 'any' with a specific type for the raw data
+      const rawLeagueData = leagueRes.data as RawLeagueData;
       const transformedLeagueInfo: LeagueInfo = {
           name: rawLeagueData.name,
           competition_id: rawLeagueData.competition_id,
