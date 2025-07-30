@@ -1,9 +1,9 @@
 /*
 ================================================================================
-File: app/page.tsx (Updated with Correct League Links)
+File: app/page.tsx (Updated with Clickable League Cards)
 ================================================================================
-This version updates the private league cards to link to both the competition
-page for making picks and the new league-specific leaderboard page.
+This version makes the entire private league card a clickable link to the
+competition page, while ensuring the action buttons inside still work correctly.
 */
 
 'use client';
@@ -50,7 +50,6 @@ export default function HomePage() {
       setLoading(false);
     });
 
-    // Check initial session
     const getInitialSession = async () => {
         const { data: { session } } = await supabase.auth.getSession();
         if (!session) {
@@ -68,7 +67,6 @@ export default function HomePage() {
     return <div className="min-h-screen flex items-center justify-center text-white">Loading...</div>;
   }
 
-  // If there is a user, show the dashboard. Otherwise, show the landing page.
   return user ? <UnifiedDashboard user={user} /> : <LandingPage />;
 }
 
@@ -83,11 +81,8 @@ function UnifiedDashboard({ user }: { user: User }) {
     const [notification, setNotification] = useState<{ message: string, type: 'success' | 'error' } | null>(null);
     const router = useRouter();
 
-    // Modal states
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [showJoinModal, setShowJoinModal] = useState(false);
-
-    // Form states
     const [newLeagueName, setNewLeagueName] = useState('');
     const [selectedCompId, setSelectedCompId] = useState<number | string>('');
     const [joinInviteCode, setJoinInviteCode] = useState('');
@@ -145,12 +140,7 @@ function UnifiedDashboard({ user }: { user: User }) {
 
         const { data: leagueData, error: leagueError } = await supabase
             .from('leagues')
-            .insert({
-                name: newLeagueName,
-                admin_id: profile.id,
-                competition_id: Number(selectedCompId),
-                invite_code: inviteCode
-            })
+            .insert({ name: newLeagueName, admin_id: profile.id, competition_id: Number(selectedCompId), invite_code: inviteCode })
             .select()
             .single();
 
@@ -272,21 +262,21 @@ function UnifiedDashboard({ user }: { user: User }) {
                     {leagues.length > 0 ? (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                             {leagues.map(league => (
-                                <div key={league.id} className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-gray-200 dark:border-slate-800 flex flex-col justify-between">
-                                    <div>
+                                <div key={league.id} className="relative group bg-white dark:bg-slate-900 p-6 rounded-2xl border border-gray-200 dark:border-slate-800 flex flex-col justify-between hover:border-blue-500 dark:hover:border-violet-500 transition-all">
+                                    <Link href={`/competitions/${league.competition_id}`} className="absolute inset-0 z-0 rounded-2xl" aria-label={`Make picks for ${league.name}`}></Link>
+                                    <div className="relative z-10">
                                         <h3 className="text-xl font-bold text-blue-600 dark:text-violet-400 mb-1">{league.name}</h3>
                                         <p className="text-gray-600 dark:text-slate-400 mb-4 text-sm">Competition: {league.competitions?.name || 'N/A'}</p>
                                         <div className="flex items-center gap-2 text-sm bg-gray-100 dark:bg-slate-800 p-2 rounded-lg">
                                             <span className="text-gray-500 dark:text-slate-400">Invite Code:</span>
                                             <strong className="text-gray-800 dark:text-white">{league.invite_code}</strong>
-                                            <Copy size={16} onClick={(e) => copyToClipboard(e, league.invite_code)} className="cursor-pointer text-gray-500 dark:text-slate-400 hover:text-black dark:hover:text-white" />
+                                            <button onClick={(e) => copyToClipboard(e, league.invite_code)} className="ml-auto p-1 text-gray-500 dark:text-slate-400 hover:text-black dark:hover:text-white"><Copy size={16} /></button>
                                         </div>
                                     </div>
-                                    <div className="flex justify-between items-center mt-4 pt-4 border-t border-gray-200 dark:border-slate-800">
+                                    <div className="relative z-10 flex justify-between items-center mt-4 pt-4 border-t border-gray-200 dark:border-slate-800">
                                         <span className="text-gray-500 dark:text-slate-400 text-sm flex items-center gap-2"><Users size={16} /> {league.league_members.length} Members</span>
                                         <div className="flex items-center gap-2">
-                                            <Link href={`/leagues/${league.id}/leaderboard`} className="p-2 text-slate-400 hover:bg-slate-800 rounded-full" title="View League Leaderboard"><BarChart2 size={16} /></Link>
-                                            <Link href={`/competitions/${league.competition_id}`} className="p-2 text-slate-400 hover:bg-slate-800 rounded-full" title="Make Picks"><ArrowRight size={16} /></Link>
+                                            <Link href={`/leagues/${league.id}/leaderboard`} className="p-2 text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-full" title="View League Leaderboard"><BarChart2 size={16} /></Link>
                                             {profile?.id === league.admin_id && (
                                                 <button onClick={(e) => handleDeleteLeague(e, league.id)} className="p-2 text-red-500 hover:bg-red-500/10 rounded-full" title="Delete League">
                                                     <Trash2 size={16} />
