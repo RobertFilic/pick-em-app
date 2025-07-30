@@ -1,16 +1,15 @@
 /*
 ================================================================================
-File: app/competitions/[id]/CompetitionDetailClient.tsx (Updated for Leagues)
+File: app/competitions/[id]/CompetitionDetailClient.tsx (Updated)
 ================================================================================
-This version is now "league-aware". It reads the leagueId from the URL to
-create the correct leaderboard link.
+This version now displays the results of a user's predictions for completed games.
 */
 
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
-import { Trophy, Clock, Calendar, CheckCircle, BarChart2, Info, HelpCircle, Users, XCircle } from 'lucide-react';
+import { Trophy, Clock, Calendar, CheckCircle, BarChart2, HelpCircle, Users, XCircle } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
@@ -37,14 +36,10 @@ export default function CompetitionDetailClient({ id }: { id: string }) {
 
   const competitionId = parseInt(id, 10);
   
-  // Get the search params from the URL to read the leagueId
   const searchParams = useSearchParams();
   const leagueId = searchParams.get('leagueId');
 
-  // Dynamically create the correct leaderboard URL
-  const leaderboardUrl = leagueId 
-    ? `/leagues/${leagueId}/leaderboard` 
-    : `/competitions/${competitionId}/leaderboard`;
+  const leaderboardUrl = leagueId ? `/leagues/${leagueId}/leaderboard` : `/competitions/${competitionId}/leaderboard`;
 
   const isLocked = (lockDate: string) => new Date(lockDate) < new Date();
 
@@ -185,7 +180,12 @@ export default function CompetitionDetailClient({ id }: { id: string }) {
               <Trophy className="w-8 h-8 mr-4 text-blue-500 dark:text-violet-400" />
               <div>
                 <h1 className="text-4xl font-bold">{competition.name}</h1>
-                {league && <p className="text-lg text-slate-400 flex items-center gap-2"><Users size={16}/> Playing in league: <strong>{league.name}</strong></p>}
+                {/* FIXED: Changed from && to a ternary operator to satisfy stricter linters */}
+                {league ? (
+                  <p className="text-lg text-slate-400 flex items-center gap-2">
+                    <Users size={16}/> Playing in league: <strong>{league.name}</strong>
+                  </p>
+                ) : null}
               </div>
             </div>
             <Link 
