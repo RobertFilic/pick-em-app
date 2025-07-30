@@ -34,8 +34,8 @@ export default function LeagueLeaderboardClient({ leagueId }: { leagueId: string
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const competitionId = parseInt(leagueId, 10);
-
+  // FIXED: Removed the unused 'competitionId' constant.
+  
   const getRankColor = (rank: number) => {
     if (rank === 1) return 'text-yellow-400';
     if (rank === 2) return 'text-gray-400';
