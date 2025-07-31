@@ -2,8 +2,8 @@
 ================================================================================
 File: app/competitions/[id]/CompetitionDetailClient.tsx (Save Picks Fix)
 ================================================================================
-This version fixes the bug that prevented saving picks by using the correct
-unique index names in the 'onConflict' parameter for the upsert operation.
+This version fixes the bug that prevented saving picks by using a dynamic
+'onConflict' parameter that adapts for public vs. private league predictions.
 */
 
 'use client';
@@ -143,32 +143,38 @@ export default function CompetitionDetailClient({ id }: { id: string }) {
     const gamePicks = allPicks.filter(p => p.game_id !== null);
     const propPicks = allPicks.filter(p => p.prop_prediction_id !== null);
 
+    // ADDED: console.log to inspect the data being sent
+    console.log("Submitting Game Picks:", gamePicks);
+    console.log("Submitting Special Event Picks:", propPicks);
+
     try {
-      if (gamePicks.length > 0) {
-        const { error: gameUpsertError } = await supabase.from('user_picks').upsert(gamePicks, {
-          // FIXED: Use the correct constraint index name for the onConflict parameter.
-          onConflict: leagueId ? 'user_picks_league_game_unique_idx' : 'user_picks_public_game_unique_idx',
-        });
-        if (gameUpsertError) throw gameUpsertError;
-      }
+  if (gamePicks.length > 0) {
+    const { error: gameUpsertError } = await supabase.from('user_picks').upsert(gamePicks, {
+      onConflict: leagueId ? ['user_id', 'game_id', 'league_id'] : ['user_id', 'game_id'],
+    });
+    if (gameUpsertError) throw gameUpsertError;
+  }
 
-      if (propPicks.length > 0) {
-        const { error: propUpsertError } = await supabase.from('user_picks').upsert(propPicks, {
-          // FIXED: Use the correct constraint index name for the onConflict parameter.
-          onConflict: leagueId ? 'user_picks_league_prop_unique_idx' : 'user_picks_public_prop_unique_idx',
-        });
-        if (propUpsertError) throw propUpsertError;
-      }
+  if (propPicks.length > 0) {
+    const { error: propUpsertError } = await supabase.from('user_picks').upsert(propPicks, {
+      onConflict: leagueId ? ['user_id', 'prop_prediction_id', 'league_id'] : ['user_id', 'prop_prediction_id'],
+    });
+    if (propUpsertError) throw propUpsertError;
+  }
 
-      setSuccess("Your picks have been saved successfully!");
-      setTimeout(() => setSuccess(null), 3000);
+  setSuccess("Your picks have been saved successfully!");
+  setTimeout(() => setSuccess(null), 3000);
 
-    } catch (upsertError) {
-      if (upsertError instanceof Error) { setError(upsertError.message); } 
-      else { setError("An unknown error occurred while saving picks."); }
-    } finally {
-      setSubmitting(false);
-    }
+} catch (upsertError) {
+  if (upsertError instanceof Error) {
+    setError(upsertError.message);
+  } else {
+    setError("An unknown error occurred while saving picks.");
+  }
+} finally {
+  setSubmitting(false);
+}
+
   };
 
   if (loading) { return <div className="text-center p-10">Loading...</div>; }
