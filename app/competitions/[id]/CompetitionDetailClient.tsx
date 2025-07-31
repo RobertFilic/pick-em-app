@@ -147,7 +147,8 @@ export default function CompetitionDetailClient({ id }: { id: string }) {
       if (gamePicks.length > 0) {
         const { error: gameUpsertError } = await supabase.from('user_picks').upsert(gamePicks, {
           // FIXED: Use the correct column names for the constraint, not the index name.
-          onConflict: 'user_id, game_id, league_id',
+          onConflict: ['user_id', 'game_id', 'league_id'],
+
         });
         if (gameUpsertError) throw gameUpsertError;
       }
