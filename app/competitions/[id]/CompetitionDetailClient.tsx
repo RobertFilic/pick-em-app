@@ -148,33 +148,35 @@ export default function CompetitionDetailClient({ id }: { id: string }) {
     console.log("Submitting Special Event Picks:", propPicks);
 
     try {
-  if (gamePicks.length > 0) {
-    const { error: gameUpsertError } = await supabase.from('user_picks').upsert(gamePicks, {
-      onConflict: leagueId ? ['user_id', 'game_id', 'league_id'] : ['user_id', 'game_id'],
-    });
-    if (gameUpsertError) throw gameUpsertError;
-  }
+      if (gamePicks.length > 0) {
+        console.log('🟦 Game Picks Payload:', gamePicks);
+        console.log('🔄 Upsert conflict keys:', leagueId ? 'user_id,game_id,league_id' : 'user_id,game_id');
 
-  if (propPicks.length > 0) {
-    const { error: propUpsertError } = await supabase.from('user_picks').upsert(propPicks, {
-      onConflict: leagueId ? ['user_id', 'prop_prediction_id', 'league_id'] : ['user_id', 'prop_prediction_id'],
-    });
-    if (propUpsertError) throw propUpsertError;
-  }
+        const { error: gameUpsertError } = await supabase.from('user_picks').upsert(gamePicks, {
+          onConflict: leagueId ? 'user_id,game_id,league_id' : 'user_id,game_id',
+        });
+        if (gameUpsertError) throw gameUpsertError;
+      }
 
-  setSuccess("Your picks have been saved successfully!");
-  setTimeout(() => setSuccess(null), 3000);
+      if (propPicks.length > 0) {
+        console.log('🟦 Game Picks Payload:', gamePicks);
+        console.log('🔄 Upsert conflict keys:', leagueId ? 'user_id,game_id,league_id' : 'user_id,game_id');
 
-} catch (upsertError) {
-  if (upsertError instanceof Error) {
-    setError(upsertError.message);
-  } else {
-    setError("An unknown error occurred while saving picks.");
-  }
-} finally {
-  setSubmitting(false);
-}
+        const { error: propUpsertError } = await supabase.from('user_picks').upsert(propPicks, {
+          onConflict: leagueId ? 'user_id,prop_prediction_id,league_id' : 'user_id,prop_prediction_id',
+        });
+        if (propUpsertError) throw propUpsertError;
+      }
 
+      setSuccess("Your picks have been saved successfully!");
+      setTimeout(() => setSuccess(null), 3000);
+
+    } catch (upsertError) {
+      if (upsertError instanceof Error) { setError(upsertError.message); } 
+      else { setError("An unknown error occurred while saving picks."); }
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   if (loading) { return <div className="text-center p-10">Loading...</div>; }
