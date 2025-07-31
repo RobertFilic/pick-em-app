@@ -143,21 +143,19 @@ export default function CompetitionDetailClient({ id }: { id: string }) {
     const gamePicks = allPicks.filter(p => p.game_id !== null);
     const propPicks = allPicks.filter(p => p.prop_prediction_id !== null);
 
-    // ADDED: console.log to inspect the data being sent
-    console.log("Submitting Game Picks:", gamePicks);
-    console.log("Submitting Special Event Picks:", propPicks);
-
     try {
       if (gamePicks.length > 0) {
         const { error: gameUpsertError } = await supabase.from('user_picks').upsert(gamePicks, {
-          onConflict: 'user_id, game_id, league_id',
+          // FIXED: Use the correct constraint based on whether it's a league pick or not.
+          onConflict: leagueId ? 'user_id,game_id,league_id' : 'user_id,game_id',
         });
         if (gameUpsertError) throw gameUpsertError;
       }
 
       if (propPicks.length > 0) {
         const { error: propUpsertError } = await supabase.from('user_picks').upsert(propPicks, {
-          onConflict: 'user_id, prop_prediction_id, league_id',
+          // FIXED: Use the correct constraint based on whether it's a league pick or not.
+          onConflict: leagueId ? 'user_id,prop_prediction_id,league_id' : 'user_id,prop_prediction_id',
         });
         if (propUpsertError) throw propUpsertError;
       }
