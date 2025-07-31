@@ -142,6 +142,11 @@ export default function CompetitionDetailClient({ id }: { id: string }) {
 
     const gamePicks = allPicks.filter(p => p.game_id !== null);
     const propPicks = allPicks.filter(p => p.prop_prediction_id !== null);
+    console.table(gamePicks.map(p => ({
+                                      game_id: p.game_id,
+                                      league_id: p.league_id,
+                                      pick: p.pick,
+                                    })));
 
     // ADDED: console.log to inspect the data being sent
     console.log("Submitting Game Picks:", gamePicks);
