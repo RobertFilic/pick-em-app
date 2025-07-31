@@ -192,6 +192,12 @@ export default function CompetitionDetailClient({ id }: { id: string }) {
 
     console.log("Submitting Game Picks:", gamePicks);
     console.log("Submitting Prop Picks:", propPicks);
+    console.log(`🧮 Sending ${gamePicks.length} picks`);
+console.table(gamePicks.map(p => ({
+  game_id: p.game_id,
+  league_id: p.league_id,
+  pick: p.pick,
+})));
 
     try {
       if (gamePicks.length > 0) {
