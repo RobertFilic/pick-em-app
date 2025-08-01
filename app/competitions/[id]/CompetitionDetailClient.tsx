@@ -188,6 +188,15 @@ export default function CompetitionDetailClient({ id }: { id: string }) {
 
     const gamePicks = payload.filter(p => p.game_id !== null);
     const propPicks = payload.filter(p => p.prop_prediction_id !== null);
+    Console logs:
+console.log("Submitting Game Picks:", gamePicks);
+    console.log("Submitting Prop Picks:", propPicks);
+    console.log(`🧮 Sending ${gamePicks.length} picks`);
+console.table(gamePicks.map(p => ({
+  game_id: p.game_id,
+  league_id: p.league_id,
+  pick: p.pick,
+})));
 
     try {
       if (gamePicks.length > 0) {
@@ -249,7 +258,7 @@ export default function CompetitionDetailClient({ id }: { id: string }) {
             </h2>
             <div className="space-y-6">
               {eventsOnDate.map(event => {
-                const eventDate = event.type === 'game' ? event.game_date : event.lock_date;
+                // FIXED: Removed the unused 'eventDate' variable
                 if (event.type === 'prop') {
                   const prop = event;
                   const userPick = picks[`prop_${prop.id}`];
