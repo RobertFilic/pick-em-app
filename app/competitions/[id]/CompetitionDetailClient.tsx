@@ -1,138 +1,92 @@
-import { useEffect, useState } from 'react';
+'use client';
+
+import { useRouter, useParams } from 'next/navigation';
 import { CheckCircle } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
-import { Button } from '@/components/ui/button';
-import { useRouter } from 'next/router';
 
 interface Game {
   id: number;
-  name: string;
-  locked: boolean;
-}
-
-interface PropPrediction {
-  id: number;
-  name: string;
-  locked: boolean;
-}
-
-interface UserPick {
-  user_id: string;
-  competition_id: number;
-  league_id: string | null;
-  game_id: number | null;
-  prop_prediction_id: number | null;
+  is_locked: boolean;
   pick: string;
 }
 
-const CompetitionDetailClient = () => {
-  const [games, setGames] = useState<Game[]>([]);
-  const [props, setProps] = useState<PropPrediction[]>([]);
-  const [userPicks, setUserPicks] = useState<UserPick[]>([]);
-  const [submitting, setSubmitting] = useState(false);
-  const [success, setSuccess] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+interface Prop {
+  id: number;
+  is_locked: boolean;
+  pick: string;
+}
+
+interface Props {
+  competitionId: number;
+  userId: string;
+  leagueId?: string | null;
+  games: Game[];
+  props: Prop[];
+}
+
+export default function CompetitionDetailClient({
+  competitionId,
+  userId,
+  leagueId = null,
+  games,
+  props,
+}: Props) {
   const router = useRouter();
-  const { id: competitionId } = router.query;
+  const params = useParams();
 
-  const leagueId = null; // or fetch from context/props if you're in a private league
-  const userId = 'user-123'; // Replace with real user context
+  const handleSave = async () => {
+    const gamePicks = games
+      .filter((g) => !g.is_locked && g.pick)
+      .map((g) => ({
+        user_id: userId,
+        competition_id: competitionId,
+        game_id: g.id,
+        league_id: leagueId,
+        prop_prediction_id: null,
+        pick: g.pick,
+      }));
 
-  useEffect(() => {
-    fetchCompetitionData();
-  }, [competitionId]);
-
-  const fetchCompetitionData = async () => {
-    if (!competitionId) return;
-
-    const { data: gameData } = await supabase
-      .from('games')
-      .select('*')
-      .eq('competition_id', competitionId);
-
-    const { data: propData } = await supabase
-      .from('prop_predictions')
-      .select('*')
-      .eq('competition_id', competitionId);
-
-    const { data: pickData } = await supabase
-      .from('user_picks')
-      .select('*')
-      .eq('user_id', userId)
-      .eq('competition_id', competitionId);
-
-    setGames(gameData || []);
-    setProps(propData || []);
-    setUserPicks(pickData || []);
-  };
-
-  const handleSubmit = async () => {
-    setSubmitting(true);
-    setError(null);
-    setSuccess(null);
+    const propPicks = props
+      .filter((p) => !p.is_locked && p.pick)
+      .map((p) => ({
+        user_id: userId,
+        competition_id: competitionId,
+        game_id: null,
+        league_id: leagueId,
+        prop_prediction_id: p.id,
+        pick: p.pick,
+      }));
 
     try {
-      const gamePicks = userPicks.filter((p) => p.game_id !== null);
-      const propPicks = userPicks.filter((p) => p.prop_prediction_id !== null);
-
       if (gamePicks.length > 0) {
         const { error: gameUpsertError } = await supabase.from('user_picks').upsert(gamePicks, {
-          onConflict: leagueId
-            ? 'user_picks_league_game_unique_idx'
-            : 'user_picks_public_game_unique_idx',
+          onConflict: leagueId ? 'user_id,game_id,league_id' : 'user_id,game_id',
         });
         if (gameUpsertError) throw gameUpsertError;
       }
 
       if (propPicks.length > 0) {
         const { error: propUpsertError } = await supabase.from('user_picks').upsert(propPicks, {
-          onConflict: leagueId
-            ? 'user_picks_league_prop_unique_idx'
-            : 'user_picks_public_prop_unique_idx',
+          onConflict: leagueId ? 'user_id,prop_prediction_id,league_id' : 'user_id,prop_prediction_id',
         });
         if (propUpsertError) throw propUpsertError;
       }
 
-      setSuccess('Your picks have been saved successfully!');
-      setTimeout(() => setSuccess(null), 3000);
-    } catch (upsertError: any) {
-      setError(upsertError.message || 'An unknown error occurred while saving picks.');
-    } finally {
-      setSubmitting(false);
+      alert('Your picks have been saved successfully!');
+    } catch (upsertError) {
+      console.error(upsertError);
+      alert('An error occurred while saving your picks.');
     }
   };
 
   return (
-    <div className="p-4">
-      <h1 className="text-xl font-bold mb-4">Competition Details</h1>
-
-      <div className="space-y-2">
-        {games.map((game) => (
-          <div key={game.id} className="border rounded p-2 flex items-center justify-between">
-            <span>{game.name}</span>
-            <CheckCircle className="text-green-500" />
-          </div>
-        ))}
-      </div>
-
-      <div className="space-y-2 mt-6">
-        {props.map((prop) => (
-          <div key={prop.id} className="border rounded p-2 flex items-center justify-between">
-            <span>{prop.name}</span>
-            <CheckCircle className="text-green-500" />
-          </div>
-        ))}
-      </div>
-
-      <div className="mt-6 flex gap-2">
-        <Button onClick={handleSubmit} disabled={submitting}>
-          {submitting ? 'Saving...' : 'Submit Picks'}
-        </Button>
-        {success && <span className="text-green-500">{success}</span>}
-        {error && <span className="text-red-500">{error}</span>}
-      </div>
+    <div>
+      <button
+        onClick={handleSave}
+        className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
+      >
+        Save Picks
+      </button>
     </div>
   );
-};
-
-export default CompetitionDetailClient;
+}
