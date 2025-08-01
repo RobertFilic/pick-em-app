@@ -18,7 +18,7 @@ export default async function CompetitionDetailPage({ params }: PageProps) {
     .select('id, is_locked')
     .eq('competition_id', competitionId);
 
-  const userId = 'mock-user-id'; // 🔁 Replace this with real auth user ID
+  const userId = 'mock-user-id'; // Replace with real user ID
   const leagueId = null;
 
   const games = gamesData.map((g) => ({ ...g, pick: '' }));
