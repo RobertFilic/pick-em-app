@@ -18,7 +18,8 @@ export default async function CompetitionDetailPage({ params }: PageProps) {
     .select('id, is_locked')
     .eq('competition_id', competitionId);
 
-  const userId = 'mock-user-id'; // Replace with real user ID
+  // Replace this with actual Supabase auth session logic if needed
+  const userId = 'mock-user-id';
   const leagueId = null;
 
   const games = gamesData.map((g) => ({ ...g, pick: '' }));
