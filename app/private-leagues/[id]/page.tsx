@@ -1,4 +1,3 @@
-// app/private-leagues/[id]/page.tsx
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
@@ -25,7 +24,6 @@ export default function PrivateLeagueDashboard({ params }: { params: Promise<{ i
   const [copied, setCopied] = useState(false);
   const [leagueId, setLeagueId] = useState<number | null>(null);
 
-  // Extract league ID from params
   useEffect(() => {
     const extractLeagueId = async () => {
       const resolvedParams = await params;
@@ -44,7 +42,7 @@ export default function PrivateLeagueDashboard({ params }: { params: Promise<{ i
 
   const fetchLeagueData = useCallback(async () => {
     if (!leagueId) return;
-    
+
     setLoading(true);
     setError(null);
 
@@ -52,7 +50,6 @@ export default function PrivateLeagueDashboard({ params }: { params: Promise<{ i
       const { data: { user } } = await supabase.auth.getUser();
       setCurrentUserId(user?.id || null);
 
-      // Get league information with member count
       const { data: leagueData, error: leagueError } = await supabase
         .from('private_leagues')
         .select(`
@@ -68,7 +65,6 @@ export default function PrivateLeagueDashboard({ params }: { params: Promise<{ i
 
       if (leagueError) throw leagueError;
 
-      // Optionally fetch competition name for display
       let competitionName = undefined;
       try {
         const { data: compData } = await supabase
@@ -79,9 +75,7 @@ export default function PrivateLeagueDashboard({ params }: { params: Promise<{ i
         if (compData?.name) {
           competitionName = compData.name;
         }
-      } catch {
-        // If competition name fetch fails, just leave undefined
-      }
+      } catch {}
 
       const leagueInfoWithDetails: PrivateLeagueInfo = {
         ...leagueData,
@@ -90,7 +84,6 @@ export default function PrivateLeagueDashboard({ params }: { params: Promise<{ i
       };
       setLeagueInfo(leagueInfoWithDetails);
 
-      // Check if current user is a member
       if (user) {
         const { data: membershipData, error: membershipError } = await supabase
           .from('private_league_members')
@@ -164,7 +157,10 @@ export default function PrivateLeagueDashboard({ params }: { params: Promise<{ i
             <Users className="w-10 h-10 mr-4 text-blue-600" />
             {leagueInfo?.name}
             {isAdmin && (
-              <Crown className="w-8 h-8 ml-3 text-yellow-500" title="You are the admin" />
+              <>
+                <span className="sr-only">You are the admin</span>
+                <Crown className="w-8 h-8 ml-3 text-yellow-500" aria-hidden="true" />
+              </>
             )}
           </h1>
           <p className="text-lg text-gray-600 dark:text-gray-400 mt-1">
