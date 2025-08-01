@@ -201,8 +201,8 @@ console.table(gamePicks.map(p => ({
       if (gamePicks.length > 0) {
         const { error: gameUpsertError } = await supabase.from('user_picks').upsert(gamePicks, {
           onConflict: leagueId 
-            ? 'user_id,league_id,game_id'  // Matches: user_picks_league_game_unique_idx
-            : 'user_id,game_id',           // Matches: user_picks_public_game_unique_idx
+            ? 'user_id,league_id,game_id'  // For league games: all 3 columns are indexed
+            : 'user_id,game_id',           // For public games: only these 2 columns are indexed (league_id is in WHERE clause)
         });
         if (gameUpsertError) throw gameUpsertError;
       }
@@ -210,8 +210,8 @@ console.table(gamePicks.map(p => ({
       if (propPicks.length > 0) {
         const { error: propUpsertError } = await supabase.from('user_picks').upsert(propPicks, {
           onConflict: leagueId 
-            ? 'user_id,league_id,prop_prediction_id'  // Matches: user_picks_league_prop_unique_idx
-            : 'user_id,prop_prediction_id',           // Matches: user_picks_public_prop_unique_idx
+            ? 'user_id,league_id,prop_prediction_id'  // For league props: all 3 columns are indexed
+            : 'user_id,prop_prediction_id',           // For public props: only these 2 columns are indexed (league_id is in WHERE clause)
         });
         if (propUpsertError) throw propUpsertError;
       }
