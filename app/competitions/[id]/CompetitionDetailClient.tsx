@@ -200,14 +200,14 @@ console.table(gamePicks.map(p => ({
     try {
       if (gamePicks.length > 0) {
         const { error: gameUpsertError } = await supabase.from('user_picks').upsert(gamePicks, {
-          onConflict: leagueId ? 'user_picks_league_game_unique_idx' : 'user_picks_public_game_unique_idx',
+          onConflict: leagueId ? 'user_id,game_id,league_id' : 'user_id,game_id',
         });
         if (gameUpsertError) throw gameUpsertError;
       }
 
       if (propPicks.length > 0) {
         const { error: propUpsertError } = await supabase.from('user_picks').upsert(propPicks, {
-          onConflict: leagueId ? 'user_picks_league_prop_unique_idx' : 'user_picks_public_prop_unique_idx',
+          onConflict: leagueId ? 'user_id,prop_prediction_id,league_id' : 'user_id,prop_prediction_id',
         });
         if (propUpsertError) throw propUpsertError;
       }
