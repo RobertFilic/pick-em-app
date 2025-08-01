@@ -72,7 +72,7 @@ export default function PrivateLeagueLeaderboardClientPage({ leagueId }: { leagu
         admin_id: leagueData.admin_id,
         competition_id: leagueData.competition_id,
         invite_code: leagueData.invite_code,
-        competition_name: leagueData.competitions && typeof leagueData.competitions === 'object' && 'name' in leagueData.competitions 
+        competition_name: leagueData.competitions && typeof leagueData.competitions === 'object' && 'name' in leagueData.competitions && typeof leagueData.competitions.name === 'string'
           ? leagueData.competitions.name 
           : 'Unknown Competition'
       };
