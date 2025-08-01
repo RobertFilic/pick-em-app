@@ -1,7 +1,5 @@
 'use client';
 
-import { useRouter, useParams } from 'next/navigation';
-import { CheckCircle } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 
 interface Game {
@@ -31,9 +29,6 @@ export default function CompetitionDetailClient({
   games,
   props,
 }: Props) {
-  const router = useRouter();
-  const params = useParams();
-
   const handleSave = async () => {
     const gamePicks = games
       .filter((g) => !g.is_locked && g.pick)
