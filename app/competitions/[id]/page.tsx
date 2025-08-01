@@ -6,7 +6,7 @@ interface PageProps {
 }
 
 export default async function CompetitionDetailPage({ params }: PageProps) {
-  const competitionId = parseInt(params.id);
+  const competitionId = parseInt(params.id, 10);
 
   const { data: gamesData = [] } = await supabase
     .from('games')
@@ -18,8 +18,8 @@ export default async function CompetitionDetailPage({ params }: PageProps) {
     .select('id, is_locked')
     .eq('competition_id', competitionId);
 
-  const userId = 'mock-user-id'; // Replace with real auth.user.id
-  const leagueId = null; // Or dynamic if you're joining a private league
+  const userId = 'mock-user-id'; // 🔁 Replace this with real auth user ID
+  const leagueId = null;
 
   const games = gamesData.map((g) => ({ ...g, pick: '' }));
   const props = propsData.map((p) => ({ ...p, pick: '' }));
