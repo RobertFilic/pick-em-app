@@ -59,7 +59,7 @@ export default function PrivateLeagueLeaderboardClientPage({ leagueId }: { leagu
           admin_id,
           competition_id,
           invite_code,
-          competitions!private_leagues_competition_id_fkey(name)
+          competitions(name)
         `)
         .eq('id', leagueId)
         .single();
@@ -67,8 +67,12 @@ export default function PrivateLeagueLeaderboardClientPage({ leagueId }: { leagu
       if (leagueError) throw leagueError;
 
       const leagueInfoWithCompetition: PrivateLeagueInfo = {
-        ...leagueData,
-        competition_name: leagueData.competitions?.name
+        id: leagueData.id,
+        name: leagueData.name,
+        admin_id: leagueData.admin_id,
+        competition_id: leagueData.competition_id,
+        invite_code: leagueData.invite_code,
+        competition_name: (leagueData.competitions as any)?.name || 'Unknown Competition'
       };
       setLeagueInfo(leagueInfoWithCompetition);
 
