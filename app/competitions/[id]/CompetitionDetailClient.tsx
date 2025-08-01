@@ -188,7 +188,6 @@ export default function CompetitionDetailClient({ id }: { id: string }) {
 
     const gamePicks = payload.filter(p => p.game_id !== null);
     const propPicks = payload.filter(p => p.prop_prediction_id !== null);
-    Console logs:
 console.log("Submitting Game Picks:", gamePicks);
     console.log("Submitting Prop Picks:", propPicks);
     console.log(`🧮 Sending ${gamePicks.length} picks`);
