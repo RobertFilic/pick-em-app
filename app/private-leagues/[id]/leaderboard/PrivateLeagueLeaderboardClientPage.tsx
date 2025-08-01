@@ -58,23 +58,31 @@ export default function PrivateLeagueLeaderboardClientPage({ leagueId }: { leagu
           name,
           admin_id,
           competition_id,
-          invite_code,
-          competitions(name)
+          invite_code
         `)
         .eq('id', leagueId)
         .single();
 
       if (leagueError) throw leagueError;
 
+      // Optionally fetch competition name for display (non-critical)
+      let competitionName = 'Competition';
+      try {
+        const { data: compData } = await supabase
+          .from('competitions')
+          .select('name')
+          .eq('id', leagueData.competition_id)
+          .single();
+        if (compData?.name) {
+          competitionName = compData.name;
+        }
+      } catch {
+        // If competition name fetch fails, just use default
+      }
+
       const leagueInfoWithCompetition: PrivateLeagueInfo = {
-        id: leagueData.id,
-        name: leagueData.name,
-        admin_id: leagueData.admin_id,
-        competition_id: leagueData.competition_id,
-        invite_code: leagueData.invite_code,
-        competition_name: leagueData.competitions && typeof leagueData.competitions === 'object' && 'name' in leagueData.competitions && typeof leagueData.competitions.name === 'string'
-          ? leagueData.competitions.name 
-          : 'Unknown Competition'
+        ...leagueData,
+        competition_name: competitionName
       };
       setLeagueInfo(leagueInfoWithCompetition);
 
@@ -223,7 +231,9 @@ export default function PrivateLeagueLeaderboardClientPage({ leagueId }: { leagu
             <Award className="w-6 h-6 mr-3 text-blue-500" />
             Your Score
             {currentUserStats.is_admin && (
-              <Crown className="w-5 h-5 ml-2 text-yellow-500" title="League Admin" />
+              <span title="League Admin">
+                <Crown className="w-5 h-5 ml-2 text-yellow-500" />
+              </span>
             )}
           </h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
@@ -276,7 +286,9 @@ export default function PrivateLeagueLeaderboardClientPage({ leagueId }: { leagu
                   <div className="flex items-center">
                     <span className="font-semibold">{entry.username}</span>
                     {entry.is_admin && (
-                      <Crown className="w-4 h-4 ml-2 text-yellow-500" title="League Admin" />
+                      <span title="League Admin">
+                        <Crown className="w-4 h-4 ml-2 text-yellow-500" />
+                      </span>
                     )}
                     {entry.user_id === currentUserId && (
                       <span className="ml-2 px-2 py-1 text-xs bg-blue-100 dark:bg-blue-800 text-blue-800 dark:text-blue-200 rounded-full">
