@@ -30,6 +30,9 @@ export default function CompetitionDetailClient({
   props,
 }: Props) {
   const handleSave = async () => {
+    const isLeague = !!leagueId;
+
+    // Prepare game picks
     const gamePicks = games
       .filter((g) => !g.is_locked && g.pick)
       .map((g) => ({
@@ -41,6 +44,7 @@ export default function CompetitionDetailClient({
         pick: g.pick,
       }));
 
+    // Prepare prop picks
     const propPicks = props
       .filter((p) => !p.is_locked && p.pick)
       .map((p) => ({
@@ -54,22 +58,32 @@ export default function CompetitionDetailClient({
 
     try {
       if (gamePicks.length > 0) {
-        const { error: gameUpsertError } = await supabase.from('user_picks').upsert(gamePicks, {
-          onConflict: leagueId ? 'user_id,game_id,league_id' : 'user_id,game_id',
-        });
+        const { error: gameUpsertError } = await supabase
+          .from('user_picks')
+          .upsert(gamePicks, {
+            onConflict: isLeague
+              ? 'user_id,game_id,league_id'
+              : 'user_id,game_id',
+          });
+
         if (gameUpsertError) throw gameUpsertError;
       }
 
       if (propPicks.length > 0) {
-        const { error: propUpsertError } = await supabase.from('user_picks').upsert(propPicks, {
-          onConflict: leagueId ? 'user_id,prop_prediction_id,league_id' : 'user_id,prop_prediction_id',
-        });
+        const { error: propUpsertError } = await supabase
+          .from('user_picks')
+          .upsert(propPicks, {
+            onConflict: isLeague
+              ? 'user_id,prop_prediction_id,league_id'
+              : 'user_id,prop_prediction_id',
+          });
+
         if (propUpsertError) throw propUpsertError;
       }
 
       alert('Your picks have been saved successfully!');
-    } catch (upsertError) {
-      console.error(upsertError);
+    } catch (err) {
+      console.error('Pick Save Error:', err);
       alert('An error occurred while saving your picks.');
     }
   };
