@@ -1,11 +1,9 @@
-
-
 /*
 ================================================================================
 File: app/competitions/[id]/CompetitionDetailClient.tsx (Save Picks Fix)
 ================================================================================
-This version fixes the bug that prevented saving picks by using the correct
-unique index names in the 'onConflict' parameter for the upsert operation.
+This version re-introduces the payload builder to filter out locked games
+before submission and uses the correct onConflict constraints.
 */
 
 'use client';
@@ -24,6 +22,51 @@ type Game = { id: number; game_date: string; stage: string | null; group: string
 type PropPrediction = { id: number; question: string; lock_date: string; correct_answer: string | null; };
 type Event = (Game & { type: 'game' }) | (PropPrediction & { type: 'prop' });
 type League = { id: string; name: string; };
+
+// --- Helper Function to Build the Payload ---
+function buildPicksPayload({
+  picksMap,
+  events,
+  userId,
+  competitionId,
+  leagueId,
+}: {
+  picksMap: Record<string, string>;
+  events: Event[];
+  userId: string;
+  competitionId: number;
+  leagueId: string | null;
+}) {
+  const now = new Date();
+  const results: {
+    user_id: string;
+    competition_id: number;
+    league_id: string | null;
+    game_id: number | null;
+    prop_prediction_id: number | null;
+    pick: string;
+  }[] = [];
+
+  events.forEach(event => {
+    const key = `${event.type}_${event.id}`;
+    const userPick = picksMap[key];
+    const lockDateStr = event.type === 'game' ? (event as Game).game_date : (event as PropPrediction).lock_date;
+    
+    // Only include picks that exist and are for events that are not yet locked.
+    if (userPick && new Date(lockDateStr) > now) {
+      results.push({
+        user_id: userId,
+        competition_id: competitionId,
+        league_id: leagueId,
+        game_id: event.type === 'game' ? event.id : null,
+        prop_prediction_id: event.type === 'prop' ? event.id : null,
+        pick: userPick,
+      });
+    }
+  });
+  return results;
+}
+
 
 // --- Main Page Component ---
 export default function CompetitionDetailClient({ id }: { id: string }) {
@@ -128,24 +171,25 @@ export default function CompetitionDetailClient({ id }: { id: string }) {
     setError(null);
     setSuccess(null);
 
-    const allPicks = Object.entries(picks).map(([key, pick]) => {
-      const [type, id] = key.split('_');
-      return {
-        user_id: userId,
-        competition_id: competitionId,
-        league_id: leagueId || null,
-        game_id: type === 'game' ? parseInt(id) : null,
-        prop_prediction_id: type === 'prop' ? parseInt(id) : null,
-        pick: pick,
-      };
+    const allEvents = Object.values(groupedEvents).flat();
+    const payload = buildPicksPayload({
+      picksMap: picks,
+      events: allEvents,
+      userId,
+      competitionId,
+      leagueId: leagueId || null,
     });
 
-    if (allPicks.length === 0) { setError("You haven't made any picks."); setSubmitting(false); return; }
+    if (payload.length === 0) {
+      setError("No new unlocked picks to submit.");
+      setSubmitting(false);
+      return;
+    }
 
-    const gamePicks = allPicks.filter(p => p.game_id !== null);
-    const propPicks = allPicks.filter(p => p.prop_prediction_id !== null);
+    const gamePicks = payload.filter(p => p.game_id !== null);
+    const propPicks = payload.filter(p => p.prop_prediction_id !== null);
 
-        console.log("Submitting Game Picks:", gamePicks);
+    console.log("Submitting Game Picks:", gamePicks);
     console.log("Submitting Prop Picks:", propPicks);
     console.log(`🧮 Sending ${gamePicks.length} picks`);
 console.table(gamePicks.map(p => ({
@@ -157,16 +201,14 @@ console.table(gamePicks.map(p => ({
     try {
       if (gamePicks.length > 0) {
         const { error: gameUpsertError } = await supabase.from('user_picks').upsert(gamePicks, {
-          // FIXED: Use the correct constraint index name for the onConflict parameter.
-          onConflict: leagueId ? 'user_picks_league_game_unique_idx' : 'user_picks_public_game_unique_idx',
+          onConflict: leagueId ? 'user_id,game_id,league_id' : 'user_id,game_id',
         });
         if (gameUpsertError) throw gameUpsertError;
       }
 
       if (propPicks.length > 0) {
         const { error: propUpsertError } = await supabase.from('user_picks').upsert(propPicks, {
-          // FIXED: Use the correct constraint index name for the onConflict parameter.
-          onConflict: leagueId ? 'user_picks_league_prop_unique_idx' : 'user_picks_public_prop_unique_idx',
+          onConflict: leagueId ? 'user_id,prop_prediction_id,league_id' : 'user_id,prop_prediction_id',
         });
         if (propUpsertError) throw propUpsertError;
       }
@@ -216,6 +258,7 @@ console.table(gamePicks.map(p => ({
             </h2>
             <div className="space-y-6">
               {eventsOnDate.map(event => {
+                const eventDate = event.type === 'game' ? event.game_date : event.lock_date;
                 if (event.type === 'prop') {
                   const prop = event;
                   const userPick = picks[`prop_${prop.id}`];
@@ -228,9 +271,6 @@ console.table(gamePicks.map(p => ({
                         <div className="relative group flex items-center">
                           <HelpCircle className="w-5 h-5 mr-2 text-blue-500" />
                           <p className="font-semibold">{prop.question}</p>
-                          <div className="absolute bottom-full mb-2 w-max px-3 py-1.5 text-sm text-white bg-gray-800 rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                            A special prediction event, not a standard game.
-                          </div>
                         </div>
                         <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
                           <Clock className="w-4 h-4 mr-1.5"/>
