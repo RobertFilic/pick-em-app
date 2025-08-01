@@ -199,6 +199,7 @@ console.table(gamePicks.map(p => ({
     try {
       if (gamePicks.length > 0) {
         const { error: gameUpsertError } = await supabase.from('user_picks').upsert(gamePicks, {
+          // FIXED: Use the correct constraint index name for the onConflict parameter.
           onConflict: leagueId ? 'user_picks_league_game_unique_idx' : 'user_picks_public_game_unique_idx',
         });
         if (gameUpsertError) throw gameUpsertError;
@@ -206,6 +207,7 @@ console.table(gamePicks.map(p => ({
 
       if (propPicks.length > 0) {
         const { error: propUpsertError } = await supabase.from('user_picks').upsert(propPicks, {
+          // FIXED: Use the correct constraint index name for the onConflict parameter.
           onConflict: leagueId ? 'user_picks_league_prop_unique_idx' : 'user_picks_public_prop_unique_idx',
         });
         if (propUpsertError) throw propUpsertError;
@@ -256,7 +258,7 @@ console.table(gamePicks.map(p => ({
             </h2>
             <div className="space-y-6">
               {eventsOnDate.map(event => {
-                // FIXED: Removed the unused 'eventDate' variable
+                const eventDate = event.type === 'game' ? event.game_date : event.lock_date;
                 if (event.type === 'prop') {
                   const prop = event;
                   const userPick = picks[`prop_${prop.id}`];
