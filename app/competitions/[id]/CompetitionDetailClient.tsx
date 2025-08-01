@@ -198,28 +198,39 @@ console.table(gamePicks.map(p => ({
 })));
 
     try {
+      // Process game picks
       if (gamePicks.length > 0) {
-        const { error: gameUpsertError } = await supabase.from('user_picks').upsert(gamePicks, {
-          onConflict: leagueId 
-            ? 'user_id,league_id,game_id'  // For league games: all 3 columns are indexed
-            : 'user_id,game_id',           // For public games: only these 2 columns are indexed (league_id is in WHERE clause)
-        });
-        if (gameUpsertError) throw gameUpsertError;
+        for (const gamePick of gamePicks) {
+          const { error: gameUpsertError } = await supabase.rpc('upsert_game_pick', {
+            p_user_id: gamePick.user_id,
+            p_competition_id: gamePick.competition_id,
+            p_game_id: gamePick.game_id,
+            p_league_id: gamePick.league_id,
+            p_pick: gamePick.pick
+          });
+          if (gameUpsertError) throw gameUpsertError;
+        }
       }
 
+      // Process prop picks
       if (propPicks.length > 0) {
-        const { error: propUpsertError } = await supabase.from('user_picks').upsert(propPicks, {
-          onConflict: leagueId 
-            ? 'user_id,league_id,prop_prediction_id'  // For league props: all 3 columns are indexed
-            : 'user_id,prop_prediction_id',           // For public props: only these 2 columns are indexed (league_id is in WHERE clause)
-        });
-        if (propUpsertError) throw propUpsertError;
+        for (const propPick of propPicks) {
+          const { error: propUpsertError } = await supabase.rpc('upsert_prop_pick', {
+            p_user_id: propPick.user_id,
+            p_competition_id: propPick.competition_id,
+            p_prop_prediction_id: propPick.prop_prediction_id,
+            p_league_id: propPick.league_id,
+            p_pick: propPick.pick
+          });
+          if (propUpsertError) throw propUpsertError;
+        }
       }
 
       setSuccess("Your picks have been saved successfully!");
       setTimeout(() => setSuccess(null), 3000);
 
     } catch (upsertError) {
+      console.error('Detailed upsert error:', upsertError);
       if (upsertError instanceof Error) { 
         setError(upsertError.message); 
       } else { 
