@@ -61,7 +61,6 @@ export default function PrivateLeagueDashboard({ params }: { params: Promise<{ i
           admin_id,
           competition_id,
           invite_code,
-          competitions!private_leagues_competition_id_fkey(name),
           private_league_members(count)
         `)
         .eq('id', leagueId)
@@ -69,9 +68,24 @@ export default function PrivateLeagueDashboard({ params }: { params: Promise<{ i
 
       if (leagueError) throw leagueError;
 
+      // Optionally fetch competition name for display
+      let competitionName = undefined;
+      try {
+        const { data: compData } = await supabase
+          .from('competitions')
+          .select('name')
+          .eq('id', leagueData.competition_id)
+          .single();
+        if (compData?.name) {
+          competitionName = compData.name;
+        }
+      } catch {
+        // If competition name fetch fails, just leave undefined
+      }
+
       const leagueInfoWithDetails: PrivateLeagueInfo = {
         ...leagueData,
-        competition_name: leagueData.competitions?.name,
+        competition_name: competitionName,
         member_count: leagueData.private_league_members?.[0]?.count || 0
       };
       setLeagueInfo(leagueInfoWithDetails);
