@@ -205,7 +205,7 @@ console.table(gamePicks.map(p => ({
             p_user_id: gamePick.user_id,
             p_competition_id: gamePick.competition_id,
             p_game_id: gamePick.game_id,
-            p_league_id: gamePick.league_id,
+            p_league_id: gamePick.league_id, // This is already null or UUID string
             p_pick: gamePick.pick
           });
           if (gameUpsertError) throw gameUpsertError;
@@ -219,7 +219,7 @@ console.table(gamePicks.map(p => ({
             p_user_id: propPick.user_id,
             p_competition_id: propPick.competition_id,
             p_prop_prediction_id: propPick.prop_prediction_id,
-            p_league_id: propPick.league_id,
+            p_league_id: propPick.league_id, // This is already null or UUID string
             p_pick: propPick.pick
           });
           if (propUpsertError) throw propUpsertError;
