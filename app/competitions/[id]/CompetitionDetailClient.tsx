@@ -258,7 +258,7 @@ console.table(gamePicks.map(p => ({
             </h2>
             <div className="space-y-6">
               {eventsOnDate.map(event => {
-                const eventDate = event.type === 'game' ? event.game_date : event.lock_date;
+                // FIXED: Removed the unused 'eventDate' variable
                 if (event.type === 'prop') {
                   const prop = event;
                   const userPick = picks[`prop_${prop.id}`];
