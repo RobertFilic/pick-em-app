@@ -1,41 +1,105 @@
 // app/leagues/[id]/page.tsx
+'use client';
+
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Trophy, Users } from 'lucide-react';
+import { Trophy, Users, Loader2 } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 
 interface Props {
   params: Promise<{ id: string }>;
 }
 
-export default async function LeaguePage({ params }: Props) {
-  const { id } = await params;
-  const leagueId = id; // UUID, no need to parse
+export default function LeaguePage({ params }: Props) {
+  const [leagueId, setLeagueId] = useState<string>('');
+  const [competitionId, setCompetitionId] = useState<number | null>(null);
+  const [leagueName, setLeagueName] = useState<string>('Private League');
+  const [competitionName, setCompetitionName] = useState<string>('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Fetch league data to get the competition_id
-  let competitionId = null;
-  let leagueName = 'Private League';
-  let competitionName = '';
+  // Extract league ID from params
+  useEffect(() => {
+    const extractLeagueId = async () => {
+      const resolvedParams = await params;
+      setLeagueId(resolvedParams.id);
+    };
+    extractLeagueId();
+  }, [params]);
 
-  try {
-    const { data: leagueData, error } = await supabase
-      .from('private_leagues')
-      .select(`
-        name,
-        competition_id,
-        competitions(name)
-      `)
-      .eq('id', leagueId)
-      .single();
+  // Fetch league data
+  useEffect(() => {
+    if (!leagueId) return;
 
-    if (!error && leagueData) {
-      competitionId = leagueData.competition_id;
-      leagueName = leagueData.name || 'Private League';
-      competitionName = leagueData.competitions && typeof leagueData.competitions === 'object' && 'name' in leagueData.competitions && typeof leagueData.competitions.name === 'string'
-        ? leagueData.competitions.name 
-        : '';
-    }
-  } catch (err) {
-    console.error('Error fetching league data:', err);
+    const fetchLeagueData = async () => {
+      setLoading(true);
+      setError(null);
+
+      try {
+        console.log('Fetching league data for ID:', leagueId);
+        
+        const { data: leagueData, error: leagueError } = await supabase
+          .from('private_leagues')
+          .select('name, competition_id')
+          .eq('id', leagueId)
+          .single();
+
+        if (leagueError) {
+          console.error('League error:', leagueError);
+          throw leagueError;
+        }
+
+        console.log('League data:', leagueData);
+
+        if (leagueData) {
+          setLeagueName(leagueData.name || 'Private League');
+          setCompetitionId(leagueData.competition_id);
+
+          // Fetch competition name if we have a competition_id
+          if (leagueData.competition_id) {
+            const { data: compData, error: compError } = await supabase
+              .from('competitions')
+              .select('name')
+              .eq('id', leagueData.competition_id)
+              .single();
+
+            if (!compError && compData) {
+              setCompetitionName(compData.name);
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching league data:', err);
+        setError(err instanceof Error ? err.message : 'Unknown error');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchLeagueData();
+  }, [leagueId]);
+
+  if (loading) {
+    return (
+      <div className="max-w-4xl mx-auto p-6">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+          <span className="ml-2 text-lg">Loading league...</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="max-w-4xl mx-auto p-6">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-6">
+          <h2 className="text-xl font-semibold text-red-800 mb-2">Error Loading League</h2>
+          <p className="text-red-600">{error}</p>
+          <p className="text-sm text-gray-600 mt-2">League ID: {leagueId}</p>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -45,11 +109,17 @@ export default async function LeaguePage({ params }: Props) {
           <Users className="w-10 h-10 mr-4 text-blue-600" />
           {leagueName}
         </h1>
-        <p className="text-gray-600 dark:text-gray-400">
-          {competitionName && `Competition: ${competitionName}`}
-        </p>
+        {competitionName && (
+          <p className="text-lg text-gray-600 dark:text-gray-400">
+            Competition: {competitionName}
+          </p>
+        )}
         <p className="text-sm text-gray-500 dark:text-gray-500">
           League ID: {leagueId}
+        </p>
+        {/* Debug info */}
+        <p className="text-xs text-gray-400 mt-1">
+          Competition ID: {competitionId || 'None found'}
         </p>
       </div>
 
@@ -90,6 +160,9 @@ export default async function LeaguePage({ params }: Props) {
             </div>
             <p className="text-gray-500 dark:text-gray-400">
               No active competition found for this league.
+            </p>
+            <p className="text-xs text-gray-400 mt-2">
+              Debug: League ID exists but no competition_id found in database
             </p>
           </div>
         )}
