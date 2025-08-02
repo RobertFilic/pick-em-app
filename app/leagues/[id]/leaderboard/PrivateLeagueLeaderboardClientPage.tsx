@@ -99,19 +99,24 @@ export default function PrivateLeagueLeaderboardClientPage({ leagueId }: { leagu
       }
 
       // Get leaderboard data - we'll create this manually since the RPC might not exist
-      // First, get all league members
+      // First, get all league members with their profile info
       const { data: members, error: membersError } = await supabase
         .from('league_members')
         .select(`
           user_id,
-          profiles!inner(username)
+          profiles(username)
         `)
         .eq('league_id', leagueId);
 
       if (membersError) throw membersError;
 
+      console.log('Members data:', members);
+
       // For each member, calculate their stats
-      const leaderboardPromises = members.map(async (member) => {
+      const leaderboardPromises = members?.map(async (member: any) => {
+        // Get username from the profile relation
+        const username = member.profiles?.username || 'Unknown User';
+        
         // Get user picks for this competition
         const { data: picks, error: picksError } = await supabase
           .from('user_picks')
@@ -124,7 +129,7 @@ export default function PrivateLeagueLeaderboardClientPage({ leagueId }: { leagu
           console.error('Error fetching picks for user:', member.user_id, picksError);
           return {
             user_id: member.user_id,
-            username: member.profiles.username || 'Unknown User',
+            username: username,
             score: 0,
             correct_picks: 0,
             incorrect_picks: 0,
@@ -137,7 +142,7 @@ export default function PrivateLeagueLeaderboardClientPage({ leagueId }: { leagu
         let incorrect = 0;
         
         if (picks) {
-          picks.forEach(pick => {
+          picks.forEach((pick: any) => {
             if (pick.pick === pick.prop_predictions.correct_answer) {
               correct++;
             } else {
@@ -148,14 +153,14 @@ export default function PrivateLeagueLeaderboardClientPage({ leagueId }: { leagu
 
         return {
           user_id: member.user_id,
-          username: member.profiles.username || 'Unknown User',
+          username: username,
           score: correct, // Simple scoring: 1 point per correct pick
           correct_picks: correct,
           incorrect_picks: incorrect,
           total_picks: correct + incorrect,
           is_admin: member.user_id === leagueData.admin_id
         };
-      });
+      }) || [];
 
       const leaderboardData = await Promise.all(leaderboardPromises);
       
