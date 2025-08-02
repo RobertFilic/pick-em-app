@@ -29,7 +29,7 @@ type LeagueMember = {
   user_id: string;
   profiles: {
     username: string;
-  } | null;
+  }[] | null;
 };
 
 type UserPick = {
@@ -131,8 +131,8 @@ export default function PrivateLeagueLeaderboardClientPage({ leagueId }: { leagu
 
       // For each member, calculate their stats
       const leaderboardPromises = typedMembers?.map(async (member: LeagueMember) => {
-        // Get username from the profile relation
-        const username = member.profiles?.username || 'Unknown User';
+        // Get username from the profile relation (profiles is an array, so take first element)
+        const username = member.profiles?.[0]?.username || 'Unknown User';
         
         // Get user picks for this competition
         const { data: picks, error: picksError } = await supabase
