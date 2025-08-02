@@ -6,7 +6,7 @@ import { Trophy, Award, CheckCircle, XCircle, Medal, Users, Crown } from 'lucide
 import Link from 'next/link';
 
 // Define the types for our data
-type PrivateLeagueLeaderboardEntry = {
+type LeagueLeaderboardEntry = {
   user_id: string;
   username: string;
   score: number;
@@ -16,8 +16,8 @@ type PrivateLeagueLeaderboardEntry = {
   is_admin?: boolean;
 };
 
-type PrivateLeagueInfo = {
-  id: number;
+type LeagueInfo = {
+  id: string;
   name: string;
   admin_id: string;
   competition_id: number;
@@ -25,11 +25,11 @@ type PrivateLeagueInfo = {
   competition_name?: string;
 };
 
-// This component receives the leagueId as a simple prop
-export default function PrivateLeagueLeaderboardClientPage({ leagueId }: { leagueId: number }) {
-  const [leaderboard, setLeaderboard] = useState<PrivateLeagueLeaderboardEntry[]>([]);
-  const [leagueInfo, setLeagueInfo] = useState<PrivateLeagueInfo | null>(null);
-  const [currentUserStats, setCurrentUserStats] = useState<PrivateLeagueLeaderboardEntry | null>(null);
+// This component receives the leagueId as a string (UUID)
+export default function PrivateLeagueLeaderboardClientPage({ leagueId }: { leagueId: string }) {
+  const [leaderboard, setLeaderboard] = useState<LeagueLeaderboardEntry[]>([]);
+  const [leagueInfo, setLeagueInfo] = useState<LeagueInfo | null>(null);
+  const [currentUserStats, setCurrentUserStats] = useState<LeagueLeaderboardEntry | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [isUserInLeague, setIsUserInLeague] = useState<boolean>(false);
   const [loading, setLoading] = useState(true);
@@ -50,9 +50,9 @@ export default function PrivateLeagueLeaderboardClientPage({ leagueId }: { leagu
       const { data: { user } } = await supabase.auth.getUser();
       setCurrentUserId(user?.id || null);
 
-      // First, get league information and verify user membership
+      // First, get league information
       const { data: leagueData, error: leagueError } = await supabase
-        .from('private_leagues')
+        .from('leagues')
         .select(`
           id,
           name,
@@ -65,7 +65,7 @@ export default function PrivateLeagueLeaderboardClientPage({ leagueId }: { leagu
 
       if (leagueError) throw leagueError;
 
-      // Optionally fetch competition name for display (non-critical)
+      // Fetch competition name for display
       let competitionName = 'Competition';
       try {
         const { data: compData } = await supabase
@@ -80,7 +80,7 @@ export default function PrivateLeagueLeaderboardClientPage({ leagueId }: { leagu
         // If competition name fetch fails, just use default
       }
 
-      const leagueInfoWithCompetition: PrivateLeagueInfo = {
+      const leagueInfoWithCompetition: LeagueInfo = {
         ...leagueData,
         competition_name: competitionName
       };
@@ -89,7 +89,7 @@ export default function PrivateLeagueLeaderboardClientPage({ leagueId }: { leagu
       // Check if current user is a member of this league
       if (user) {
         const { data: membershipData, error: membershipError } = await supabase
-          .from('private_league_members')
+          .from('league_members')
           .select('user_id')
           .eq('league_id', leagueId)
           .eq('user_id', user.id)
@@ -98,28 +98,77 @@ export default function PrivateLeagueLeaderboardClientPage({ leagueId }: { leagu
         setIsUserInLeague(!membershipError && membershipData !== null);
       }
 
-      // Get leaderboard data for league members only
-      const { data: leaderboardData, error: leaderboardError } = await supabase
-        .rpc('get_private_league_leaderboard', { 
-          league_id_param: leagueId 
-        });
+      // Get leaderboard data - we'll create this manually since the RPC might not exist
+      // First, get all league members
+      const { data: members, error: membersError } = await supabase
+        .from('league_members')
+        .select(`
+          user_id,
+          profiles!inner(username)
+        `)
+        .eq('league_id', leagueId);
 
-      if (leaderboardError) throw leaderboardError;
+      if (membersError) throw membersError;
 
-      console.log('Private league leaderboard data:', leaderboardData);
+      // For each member, calculate their stats
+      const leaderboardPromises = members.map(async (member) => {
+        // Get user picks for this competition
+        const { data: picks, error: picksError } = await supabase
+          .from('user_picks')
+          .select('pick, prop_predictions!inner(correct_answer)')
+          .eq('user_id', member.user_id)
+          .eq('competition_id', leagueData.competition_id)
+          .not('prop_predictions.correct_answer', 'is', null);
 
-      const data = leaderboardData as PrivateLeagueLeaderboardEntry[];
+        if (picksError) {
+          console.error('Error fetching picks for user:', member.user_id, picksError);
+          return {
+            user_id: member.user_id,
+            username: member.profiles.username || 'Unknown User',
+            score: 0,
+            correct_picks: 0,
+            incorrect_picks: 0,
+            total_picks: 0,
+            is_admin: member.user_id === leagueData.admin_id
+          };
+        }
+
+        let correct = 0;
+        let incorrect = 0;
+        
+        if (picks) {
+          picks.forEach(pick => {
+            if (pick.pick === pick.prop_predictions.correct_answer) {
+              correct++;
+            } else {
+              incorrect++;
+            }
+          });
+        }
+
+        return {
+          user_id: member.user_id,
+          username: member.profiles.username || 'Unknown User',
+          score: correct, // Simple scoring: 1 point per correct pick
+          correct_picks: correct,
+          incorrect_picks: incorrect,
+          total_picks: correct + incorrect,
+          is_admin: member.user_id === leagueData.admin_id
+        };
+      });
+
+      const leaderboardData = await Promise.all(leaderboardPromises);
       
-      // Mark admin users
-      const dataWithAdmin = data.map(entry => ({
-        ...entry,
-        is_admin: entry.user_id === leagueData.admin_id
-      }));
+      // Sort by score (descending), then by total picks (descending) as tiebreaker
+      leaderboardData.sort((a, b) => {
+        if (a.score !== b.score) return b.score - a.score;
+        return b.total_picks - a.total_picks;
+      });
 
-      setLeaderboard(dataWithAdmin);
+      setLeaderboard(leaderboardData);
 
       if (user) {
-        const userStats = dataWithAdmin.find(entry => entry.user_id === user.id);
+        const userStats = leaderboardData.find(entry => entry.user_id === user.id);
         setCurrentUserStats(userStats || null);
       }
 
@@ -129,7 +178,7 @@ export default function PrivateLeagueLeaderboardClientPage({ leagueId }: { leagu
       } else {
         setError("An unknown error occurred");
       }
-      console.error("Error fetching private league leaderboard:", err);
+      console.error("Error fetching league leaderboard:", err);
     } finally {
       setLoading(false);
     }
@@ -140,7 +189,7 @@ export default function PrivateLeagueLeaderboardClientPage({ leagueId }: { leagu
   }, [fetchLeaderboardData]);
 
   if (loading) {
-    return <div className="text-center p-10">Loading private league leaderboard...</div>;
+    return <div className="text-center p-10">Loading league leaderboard...</div>;
   }
 
   if (error) {
@@ -154,7 +203,7 @@ export default function PrivateLeagueLeaderboardClientPage({ leagueId }: { leagu
           <Users className="w-12 h-12 mx-auto mb-4 text-yellow-600" />
           <h2 className="text-xl font-bold mb-2">Access Restricted</h2>
           <p className="text-gray-600 dark:text-gray-400 mb-4">
-            You need to be a member of this private league to view the leaderboard.
+            You need to be a member of this league to view the leaderboard.
           </p>
           <p className="text-sm text-gray-500">
             Ask the league admin for an invite code to join this league.
@@ -178,7 +227,7 @@ export default function PrivateLeagueLeaderboardClientPage({ leagueId }: { leagu
         <div>
           <h1 className="text-4xl font-bold flex items-center">
             <Trophy className="w-10 h-10 mr-4 text-yellow-400" />
-            Private League Leaderboard
+            League Leaderboard
           </h1>
           <p className="text-lg text-gray-600 dark:text-gray-400 mt-1">
             {leagueInfo?.name}
@@ -191,14 +240,14 @@ export default function PrivateLeagueLeaderboardClientPage({ leagueId }: { leagu
         </div>
         <div className="flex gap-3 mt-4 sm:mt-0">
           <Link 
-            href={`/private-leagues/${leagueId}`}
+            href={`/leagues/${leagueId}`}
             className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-semibold transition-colors"
           >
             Back to League
           </Link>
           {leagueInfo && currentUserId === leagueInfo.admin_id && (
             <Link 
-              href={`/private-leagues/${leagueId}/manage`}
+              href={`/leagues/${leagueId}/manage`}
               className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 font-semibold transition-colors flex items-center"
             >
               <Crown className="w-4 h-4 mr-2" />
@@ -304,7 +353,7 @@ export default function PrivateLeagueLeaderboardClientPage({ leagueId }: { leagu
         </table>
         {leaderboard.length === 0 && (
           <p className="p-6 text-center text-gray-500">
-            No scores have been calculated yet for this private league.
+            No scores have been calculated yet for this league.
           </p>
         )}
       </div>
