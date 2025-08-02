@@ -183,34 +183,35 @@ function UnifiedDashboard({ user }: { user: User }) {
         setIsSubmitting(true);
         setFormError('');
 
-        const { data: leagueData, error: findError } = await supabase
-            .from('leagues')
-            .select('id')
-            .eq('invite_code', joinInviteCode.trim())
-            .single();
+        try {
+            // Use the join_league function instead of querying directly
+            const { data, error } = await supabase.rpc('join_league', {
+                invite_code_to_join: joinInviteCode.trim()
+            });
 
-        if (findError || !leagueData) {
-            setFormError("Invalid invite code. Please check and try again.");
-            setIsSubmitting(false);
-            return;
-        }
-
-        const { error: memberError } = await supabase
-            .from('league_members')
-            .insert({ league_id: leagueData.id, user_id: profile.id });
-
-        if (memberError) {
-            if (memberError.code === '23505') {
-                 setFormError("You are already a member of this league.");
-            } else {
-                 setFormError(memberError.message);
+            if (error) {
+                console.error('RPC Error:', error);
+                setFormError("An error occurred while joining the league. Please try again.");
+                setIsSubmitting(false);
+                return;
             }
-        } else {
-            setShowJoinModal(false);
-            setJoinInviteCode('');
-            await fetchDashboardData();
-            showNotification("Successfully joined league!", 'success');
+
+            // Parse the JSON response from the function
+            const result = data as { success: boolean; message: string; league_id?: string; league_name?: string };
+
+            if (!result.success) {
+                setFormError(result.message);
+            } else {
+                setShowJoinModal(false);
+                setJoinInviteCode('');
+                await fetchDashboardData();
+                showNotification(result.message, 'success');
+            }
+        } catch (err) {
+            console.error('Unexpected error:', err);
+            setFormError("An unexpected error occurred. Please try again.");
         }
+        
         setIsSubmitting(false);
     };
     
