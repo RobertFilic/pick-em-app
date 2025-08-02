@@ -1,10 +1,10 @@
 /*
 ================================================================================
-File: app/page.tsx (Updated with Correct League Links)
+File: app/page.tsx (Updated with Clickable League Cards)
 ================================================================================
-This version updates the private league cards to link to the competition page
-with the correct leagueId in the URL, which is crucial for making
-league-specific predictions.
+This version fixes the event propagation issue, making the entire private 
+league card a clickable link while ensuring the action buttons inside still 
+work correctly.
 */
 
 'use client';
@@ -82,8 +82,11 @@ function UnifiedDashboard({ user }: { user: User }) {
     const [notification, setNotification] = useState<{ message: string, type: 'success' | 'error' } | null>(null);
     const router = useRouter();
 
+    // Modal states
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [showJoinModal, setShowJoinModal] = useState(false);
+
+    // Form states
     const [newLeagueName, setNewLeagueName] = useState('');
     const [selectedCompId, setSelectedCompId] = useState<number | string>('');
     const [joinInviteCode, setJoinInviteCode] = useState('');
@@ -141,7 +144,12 @@ function UnifiedDashboard({ user }: { user: User }) {
 
         const { data: leagueData, error: leagueError } = await supabase
             .from('leagues')
-            .insert({ name: newLeagueName, admin_id: profile.id, competition_id: Number(selectedCompId), invite_code: inviteCode })
+            .insert({
+                name: newLeagueName,
+                admin_id: profile.id,
+                competition_id: Number(selectedCompId),
+                invite_code: inviteCode
+            })
             .select()
             .single();
 
@@ -206,6 +214,7 @@ function UnifiedDashboard({ user }: { user: User }) {
         setIsSubmitting(false);
     };
     
+    // FIXED: Added event parameter and called e.stopPropagation()
     const handleDeleteLeague = async (e: React.MouseEvent, leagueId: string) => {
         e.stopPropagation();
         if (window.confirm("Are you sure you want to permanently delete this league? This cannot be undone.")) {
@@ -219,6 +228,7 @@ function UnifiedDashboard({ user }: { user: User }) {
         }
     };
     
+    // FIXED: Added event parameter and called e.stopPropagation()
     const copyToClipboard = (e: React.MouseEvent, text: string) => {
         e.stopPropagation();
         navigator.clipboard.writeText(text).then(() => {
@@ -263,7 +273,7 @@ function UnifiedDashboard({ user }: { user: User }) {
                     {leagues.length > 0 ? (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                             {leagues.map(league => (
-                                <Link key={league.id} href={`/competitions/${league.competition_id}?leagueId=${league.id}`} className="group block bg-white dark:bg-slate-900 p-6 rounded-2xl border border-gray-200 dark:border-slate-800 hover:border-blue-500 dark:hover:border-violet-500 transition-all">
+                                <Link key={league.id} href={`/competitions/${league.competition_id}?leagueId=${league.id}`} className="group block bg-white dark:bg-slate-900 p-6 rounded-2xl border border-gray-200 dark:border-slate-800 flex flex-col justify-between hover:border-blue-500 dark:hover:border-violet-500 transition-all">
                                     <div className="flex flex-col h-full">
                                         <div className="flex-grow">
                                             <h3 className="text-xl font-bold text-blue-600 dark:text-violet-400 mb-1">{league.name}</h3>
@@ -277,6 +287,7 @@ function UnifiedDashboard({ user }: { user: User }) {
                                         <div className="flex justify-between items-center mt-4 pt-4 border-t border-gray-200 dark:border-slate-800">
                                             <span className="text-gray-500 dark:text-slate-400 text-sm flex items-center gap-2"><Users size={16} /> {league.league_members.length} Members</span>
                                             <div className="flex items-center gap-2">
+                                                {/* FIXED: Added onClick with e.stopPropagation() to the leaderboard link */}
                                                 <Link href={`/leagues/${league.id}/leaderboard`} onClick={(e) => e.stopPropagation()} className="p-2 text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-full" title="View League Leaderboard"><BarChart2 size={16} /></Link>
                                                 {profile?.id === league.admin_id && (
                                                     <button onClick={(e) => handleDeleteLeague(e, league.id)} className="p-2 text-red-500 hover:bg-red-500/10 rounded-full" title="Delete League"><Trash2 size={16} /></button>
