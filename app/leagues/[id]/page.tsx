@@ -61,7 +61,7 @@ export default async function LeaguePage({ params }: Props) {
           <li>• Only league members can see your rankings and compete with you</li>
           <li>• Your picks in competitions automatically count towards your league score</li>
           <li>• League rankings update in real-time as games are completed</li>
-          <li>• Invite friends using your league's invite code</li>
+          <li>• Invite friends using your league&apos;s invite code</li>
         </ul>
       </div>
     </div>
