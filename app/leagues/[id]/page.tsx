@@ -38,8 +38,9 @@ export default function LeaguePage({ params }: Props) {
       try {
         console.log('Fetching league data for ID:', leagueId);
         
+        // Query the leagues table directly
         const { data: leagueData, error: leagueError } = await supabase
-          .from('private_leagues')
+          .from('leagues')
           .select('name, competition_id')
           .eq('id', leagueId)
           .single();
@@ -65,6 +66,8 @@ export default function LeaguePage({ params }: Props) {
 
             if (!compError && compData) {
               setCompetitionName(compData.name);
+            } else {
+              console.warn('Competition table error:', compError);
             }
           }
         }
@@ -97,6 +100,14 @@ export default function LeaguePage({ params }: Props) {
           <h2 className="text-xl font-semibold text-red-800 mb-2">Error Loading League</h2>
           <p className="text-red-600">{error}</p>
           <p className="text-sm text-gray-600 mt-2">League ID: {leagueId}</p>
+          {error.includes('relation') && (
+            <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded">
+              <p className="text-sm text-yellow-800">
+                <strong>Database Setup Issue:</strong> Unable to connect to the leagues table. 
+                Please check your database connection and table permissions.
+              </p>
+            </div>
+          )}
         </div>
       </div>
     );
