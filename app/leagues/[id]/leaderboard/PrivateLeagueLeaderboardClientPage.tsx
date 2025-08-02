@@ -36,7 +36,7 @@ type UserPick = {
   pick: string;
   prop_predictions: {
     correct_answer: string;
-  };
+  }[];
 };
 
 // This component receives the leagueId as a string (UUID)
@@ -163,9 +163,11 @@ export default function PrivateLeagueLeaderboardClientPage({ leagueId }: { leagu
         
         if (typedPicks) {
           typedPicks.forEach((pick: UserPick) => {
-            if (pick.pick === pick.prop_predictions.correct_answer) {
+            // prop_predictions is an array, so take the first element
+            const correctAnswer = pick.prop_predictions?.[0]?.correct_answer;
+            if (correctAnswer && pick.pick === correctAnswer) {
               correct++;
-            } else {
+            } else if (correctAnswer) {
               incorrect++;
             }
           });
