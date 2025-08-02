@@ -25,6 +25,20 @@ type LeagueInfo = {
   competition_name?: string;
 };
 
+type LeagueMember = {
+  user_id: string;
+  profiles: {
+    username: string;
+  } | null;
+};
+
+type UserPick = {
+  pick: string;
+  prop_predictions: {
+    correct_answer: string;
+  };
+};
+
 // This component receives the leagueId as a string (UUID)
 export default function PrivateLeagueLeaderboardClientPage({ leagueId }: { leagueId: string }) {
   const [leaderboard, setLeaderboard] = useState<LeagueLeaderboardEntry[]>([]);
@@ -112,8 +126,11 @@ export default function PrivateLeagueLeaderboardClientPage({ leagueId }: { leagu
 
       console.log('Members data:', members);
 
+      // Cast the members data to our expected type
+      const typedMembers = members as LeagueMember[] | null;
+
       // For each member, calculate their stats
-      const leaderboardPromises = members?.map(async (member: any) => {
+      const leaderboardPromises = typedMembers?.map(async (member: LeagueMember) => {
         // Get username from the profile relation
         const username = member.profiles?.username || 'Unknown User';
         
@@ -141,8 +158,11 @@ export default function PrivateLeagueLeaderboardClientPage({ leagueId }: { leagu
         let correct = 0;
         let incorrect = 0;
         
-        if (picks) {
-          picks.forEach((pick: any) => {
+        // Cast picks to our expected type
+        const typedPicks = picks as UserPick[] | null;
+        
+        if (typedPicks) {
+          typedPicks.forEach((pick: UserPick) => {
             if (pick.pick === pick.prop_predictions.correct_answer) {
               correct++;
             } else {
