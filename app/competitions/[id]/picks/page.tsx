@@ -1,10 +1,10 @@
 /*
 ================================================================================
-File: app/competitions/[id]/page.tsx (Server Component)
+File: app/competitions/[id]/picks/page.tsx (Server Component)
 ================================================================================
 */
 
-import CompetitionDetailClient from './CompetitionDetailClient';
+import PicksClient from './PicksClient';
 
 // This interface defines the shape of the props for the page
 interface Props {
@@ -12,9 +12,9 @@ interface Props {
 }
 
 // This is an async Server Component that correctly awaits the params
-export default async function CompetitionDetailPage({ params }: Props) {
+export default async function CompetitionPicksPage({ params }: Props) {
   const { id } = await params;
 
   // Render the Client Component and pass the ID as a prop
-  return <CompetitionDetailClient id={id} />;
+  return <PicksClient id={id} />;
 }
