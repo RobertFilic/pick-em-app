@@ -3,7 +3,7 @@ import { MetadataRoute } from 'next'
 import { supabase } from '@/lib/supabaseClient'
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const baseUrl = 'https://pick-em-app.vercel.app' // Update to your domain
+  const baseUrl = 'https://www.playpredix.com' // Updated to your actual domain
 
   try {
     // Get competitions for dynamic URLs

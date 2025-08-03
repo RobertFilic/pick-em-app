@@ -2,7 +2,7 @@
 import { MetadataRoute } from 'next'
 
 export default function robots(): MetadataRoute.Robots {
-  const baseUrl = 'https://pick-em-app.vercel.app'
+  const baseUrl = 'https://www.playpredix.com'
   const isProduction = process.env.NODE_ENV === 'production' && 
                       process.env.VERCEL_ENV === 'production'
 
