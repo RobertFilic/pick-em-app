@@ -1,20 +1,20 @@
 /*
 ================================================================================
-File: app/competitions/[id]/CompetitionDetailClient.tsx (Final Fix)
+File: app/competitions/[id]/CompetitionDetailClient.tsx (Updated for Both Users)
 ================================================================================
-This version is updated to work with the rebuilt user_picks table. It uses
-the correct unique index names in the 'onConflict' parameter to save picks
-for both public competitions and private leagues.
+This version works for both authenticated and non-authenticated users.
+Non-authenticated users can make picks (stored in localStorage) and are prompted
+to register/login when trying to save.
 */
 
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
-import { Trophy, Clock, Calendar, CheckCircle, BarChart2, HelpCircle, Users } from 'lucide-react';
+import { Trophy, Clock, Calendar, CheckCircle, BarChart2, HelpCircle, Users, LogIn, UserPlus, X } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 
 // --- Type Definitions ---
 type Competition = { id: number; name: string; description: string | null; lock_date: string; allow_draws: boolean; };
@@ -23,6 +23,8 @@ type Game = { id: number; game_date: string; stage: string | null; group: string
 type PropPrediction = { id: number; question: string; lock_date: string; correct_answer: string | null; };
 type Event = (Game & { type: 'game' }) | (PropPrediction & { type: 'prop' });
 type League = { id: string; name: string; };
+
+const PICKS_STORAGE_KEY = 'temp_picks_';
 
 // --- Helper Function to Build the Payload ---
 function buildPicksPayload({
@@ -67,7 +69,6 @@ function buildPicksPayload({
   return results;
 }
 
-
 // --- Main Page Component ---
 export default function CompetitionDetailClient({ id }: { id: string }) {
   const [competition, setCompetition] = useState<Competition | null>(null);
@@ -79,26 +80,106 @@ export default function CompetitionDetailClient({ id }: { id: string }) {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
+  const [showAuthModal, setShowAuthModal] = useState(false);
 
   const competitionId = parseInt(id, 10);
+  const router = useRouter();
   
   const searchParams = useSearchParams();
   const leagueId = searchParams.get('leagueId');
 
   const leaderboardUrl = leagueId ? `/leagues/${leagueId}/leaderboard` : `/competitions/${competitionId}/leaderboard`;
+  const storageKey = `${PICKS_STORAGE_KEY}${competitionId}${leagueId ? `_${leagueId}` : ''}`;
 
   const isLocked = (lockDate: string) => new Date(lockDate) < new Date();
 
-  const fetchCompetitionData = useCallback(async (currentUserId: string) => {
+  // Load picks from localStorage for non-authenticated users
+  const loadTempPicks = useCallback(() => {
+    if (typeof window !== 'undefined') {
+      const tempPicks = localStorage.getItem(storageKey);
+      if (tempPicks) {
+        try {
+          return JSON.parse(tempPicks);
+        } catch (e) {
+          console.error('Error parsing temp picks:', e);
+        }
+      }
+    }
+    return {};
+  }, [storageKey]);
+
+  // Save picks to localStorage for non-authenticated users
+  const saveTempPicks = useCallback((newPicks: { [key: string]: string }) => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(storageKey, JSON.stringify(newPicks));
+    }
+  }, [storageKey]);
+
+  // Transfer temporary picks to authenticated user account
+  const transferTempPicks = useCallback(async (newUserId: string) => {
+    const tempPicks = loadTempPicks();
+    if (Object.keys(tempPicks).length === 0) return;
+
+    try {
+      const allEvents = Object.values(groupedEvents).flat();
+      const payload = buildPicksPayload({
+        picksMap: tempPicks,
+        events: allEvents,
+        userId: newUserId,
+        competitionId,
+        leagueId: leagueId || null,
+      });
+
+      const gamePicks = payload.filter(p => p.game_id !== null);
+      const propPicks = payload.filter(p => p.prop_prediction_id !== null);
+
+      // Save game picks
+      for (const gamePick of gamePicks) {
+        const { error: gameUpsertError } = await supabase.rpc('upsert_game_pick', {
+          p_user_id: gamePick.user_id,
+          p_competition_id: gamePick.competition_id,
+          p_game_id: gamePick.game_id,
+          p_league_id: gamePick.league_id,
+          p_pick: gamePick.pick
+        });
+        if (gameUpsertError) throw gameUpsertError;
+      }
+
+      // Save prop picks
+      for (const propPick of propPicks) {
+        const { error: propUpsertError } = await supabase.rpc('upsert_prop_pick', {
+          p_user_id: propPick.user_id,
+          p_competition_id: propPick.competition_id,
+          p_prop_prediction_id: propPick.prop_prediction_id,
+          p_league_id: propPick.league_id,
+          p_pick: propPick.pick
+        });
+        if (propUpsertError) throw propUpsertError;
+      }
+
+      // Clear temporary picks after successful transfer
+      localStorage.removeItem(storageKey);
+      setSuccess("Your picks have been saved successfully!");
+      setTimeout(() => setSuccess(null), 3000);
+
+    } catch (error) {
+      console.error('Error transferring picks:', error);
+      setError("Error transferring your picks. Please try again.");
+    }
+  }, [loadTempPicks, groupedEvents, competitionId, leagueId, storageKey]);
+
+  const fetchCompetitionData = useCallback(async (currentUserId: string | null) => {
     setLoading(true);
     setError(null);
     try {
-      if (leagueId) {
+      // League data (only for authenticated users with leagueId)
+      if (leagueId && currentUserId) {
         const { data: leagueData, error: leagueError } = await supabase.from('leagues').select('id, name').eq('id', leagueId).single();
         if (leagueError) throw leagueError;
         setLeague(leagueData);
       }
 
+      // Public competition data (available to everyone)
       const [competitionRes, gamesRes, groupingsRes, propPredictionsRes] = await Promise.all([
         supabase.from('competitions').select('*').eq('id', competitionId).single(),
         supabase.from('games').select('*, team_a:teams!games_team_a_id_fkey(*), team_b:teams!games_team_b_id_fkey(*)').eq('competition_id', competitionId),
@@ -109,14 +190,28 @@ export default function CompetitionDetailClient({ id }: { id: string }) {
       if (competitionRes.error) throw competitionRes.error;
       setCompetition(competitionRes.data);
 
-      let picksQuery = supabase.from('user_picks').select('game_id, prop_prediction_id, pick').eq('user_id', currentUserId).eq('competition_id', competitionId);
-      if (leagueId) {
-        picksQuery = picksQuery.eq('league_id', leagueId);
+      // Load existing picks
+      let existingPicks = {};
+      if (currentUserId) {
+        // Authenticated user - load from database
+        let picksQuery = supabase.from('user_picks').select('game_id, prop_prediction_id, pick').eq('user_id', currentUserId).eq('competition_id', competitionId);
+        if (leagueId) {
+          picksQuery = picksQuery.eq('league_id', leagueId);
+        } else {
+          picksQuery = picksQuery.is('league_id', null);
+        }
+        const { data: picksData, error: picksError } = await picksQuery;
+        if (picksError) throw picksError;
+
+        existingPicks = picksData.reduce((acc, pick) => {
+          const key = pick.game_id ? `game_${pick.game_id}` : `prop_${pick.prop_prediction_id}`;
+          acc[key] = pick.pick;
+          return acc;
+        }, {} as { [key: string]: string });
       } else {
-        picksQuery = picksQuery.is('league_id', null);
+        // Non-authenticated user - load from localStorage
+        existingPicks = loadTempPicks();
       }
-      const { data: picksData, error: picksError } = await picksQuery;
-      if (picksError) throw picksError;
 
       const groupMap = groupingsRes.data!.reduce((acc, item) => { acc[item.team_id] = item.group; return acc; }, {} as { [key: number]: string });
       const gamesWithGroups: Event[] = gamesRes.data!.map(game => ({ ...game, group: game.team_a ? groupMap[game.team_a.id] : null, type: 'game' }));
@@ -129,13 +224,8 @@ export default function CompetitionDetailClient({ id }: { id: string }) {
         acc[date].push(event);
         return acc;
       }, {} as { [key: string]: Event[] });
-      setGroupedEvents(eventsByDate);
       
-      const existingPicks = picksData.reduce((acc, pick) => {
-        const key = pick.game_id ? `game_${pick.game_id}` : `prop_${pick.prop_prediction_id}`;
-        acc[key] = pick.pick;
-        return acc;
-      }, {} as { [key: string]: string });
+      setGroupedEvents(eventsByDate);
       setPicks(existingPicks);
 
     } catch (err) {
@@ -144,29 +234,56 @@ export default function CompetitionDetailClient({ id }: { id: string }) {
     } finally {
       setLoading(false);
     }
-  }, [competitionId, leagueId]);
+  }, [competitionId, leagueId, loadTempPicks]);
 
   useEffect(() => {
     const getAndSetUser = async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        setUserId(user.id);
-        fetchCompetitionData(user.id);
-      } else {
-        setLoading(false);
-        setError("You must be logged in to view this page.");
-      }
+      setUserId(user?.id || null);
+      await fetchCompetitionData(user?.id || null);
     };
     getAndSetUser();
-  }, [fetchCompetitionData]);
+
+    // Listen for auth changes
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+      const newUserId = session?.user?.id || null;
+      setUserId(newUserId);
+      
+      if (event === 'SIGNED_IN' && newUserId) {
+        // User just signed in - transfer any temporary picks
+        await transferTempPicks(newUserId);
+        // Reload data as authenticated user
+        await fetchCompetitionData(newUserId);
+      } else {
+        // User signed out or initial load
+        await fetchCompetitionData(newUserId);
+      }
+    });
+
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
+  }, [fetchCompetitionData, transferTempPicks]);
   
   const handlePickChange = (type: 'game' | 'prop', id: number, pickValue: string) => {
     const key = `${type}_${id}`;
-    setPicks(prev => ({ ...prev, [key]: pickValue }));
+    const newPicks = { ...picks, [key]: pickValue };
+    setPicks(newPicks);
+    
+    // Save to localStorage for non-authenticated users
+    if (!userId) {
+      saveTempPicks(newPicks);
+    }
   };
 
   const handleSubmitPicks = async () => {
-    if (!userId) { setError("User not found."); return; }
+    if (!userId) {
+      // Non-authenticated user - show auth modal
+      setShowAuthModal(true);
+      return;
+    }
+
+    // Authenticated user - save picks normally
     setSubmitting(true);
     setError(null);
     setSuccess(null);
@@ -188,42 +305,30 @@ export default function CompetitionDetailClient({ id }: { id: string }) {
 
     const gamePicks = payload.filter(p => p.game_id !== null);
     const propPicks = payload.filter(p => p.prop_prediction_id !== null);
-console.log("Submitting Game Picks:", gamePicks);
-    console.log("Submitting Prop Picks:", propPicks);
-    console.log(`🧮 Sending ${gamePicks.length} picks`);
-console.table(gamePicks.map(p => ({
-  game_id: p.game_id,
-  league_id: p.league_id,
-  pick: p.pick,
-})));
 
     try {
       // Process game picks
-      if (gamePicks.length > 0) {
-        for (const gamePick of gamePicks) {
-          const { error: gameUpsertError } = await supabase.rpc('upsert_game_pick', {
-            p_user_id: gamePick.user_id,
-            p_competition_id: gamePick.competition_id,
-            p_game_id: gamePick.game_id,
-            p_league_id: gamePick.league_id, // This is already null or UUID string
-            p_pick: gamePick.pick
-          });
-          if (gameUpsertError) throw gameUpsertError;
-        }
+      for (const gamePick of gamePicks) {
+        const { error: gameUpsertError } = await supabase.rpc('upsert_game_pick', {
+          p_user_id: gamePick.user_id,
+          p_competition_id: gamePick.competition_id,
+          p_game_id: gamePick.game_id,
+          p_league_id: gamePick.league_id,
+          p_pick: gamePick.pick
+        });
+        if (gameUpsertError) throw gameUpsertError;
       }
 
       // Process prop picks
-      if (propPicks.length > 0) {
-        for (const propPick of propPicks) {
-          const { error: propUpsertError } = await supabase.rpc('upsert_prop_pick', {
-            p_user_id: propPick.user_id,
-            p_competition_id: propPick.competition_id,
-            p_prop_prediction_id: propPick.prop_prediction_id,
-            p_league_id: propPick.league_id, // This is already null or UUID string
-            p_pick: propPick.pick
-          });
-          if (propUpsertError) throw propUpsertError;
-        }
+      for (const propPick of propPicks) {
+        const { error: propUpsertError } = await supabase.rpc('upsert_prop_pick', {
+          p_user_id: propPick.user_id,
+          p_competition_id: propPick.competition_id,
+          p_prop_prediction_id: propPick.prop_prediction_id,
+          p_league_id: propPick.league_id,
+          p_pick: propPick.pick
+        });
+        if (propUpsertError) throw propUpsertError;
       }
 
       setSuccess("Your picks have been saved successfully!");
@@ -247,6 +352,40 @@ console.table(gamePicks.map(p => ({
 
   return (
     <div>
+      {/* Auth Modal for Non-authenticated Users */}
+      {showAuthModal && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-[1000]">
+          <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-8 rounded-2xl w-full max-w-md relative">
+            <button 
+              onClick={() => setShowAuthModal(false)} 
+              className="absolute top-4 right-4 text-gray-500 dark:text-slate-400 hover:text-black dark:hover:text-white"
+            >
+              <X size={24} />
+            </button>
+            <h2 className="text-2xl font-bold mb-4">Save Your Picks</h2>
+            <p className="text-gray-600 dark:text-gray-400 mb-6">
+              Create an account or log in to save your picks and compete with others!
+            </p>
+            <div className="flex gap-3">
+              <Link
+                href="/signup"
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+              >
+                <UserPlus className="w-4 h-4" />
+                Sign Up
+              </Link>
+              <Link
+                href="/login"
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                <LogIn className="w-4 h-4" />
+                Log In
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-gray-200 dark:border-slate-800 mb-8">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-2">
             <div className="flex items-center">
@@ -254,18 +393,31 @@ console.table(gamePicks.map(p => ({
               <div>
                 <h1 className="text-4xl font-bold">{competition.name}</h1>
                 {league && <p className="text-lg text-slate-400 flex items-center gap-2"><Users size={16}/> Playing in league: <strong>{league.name}</strong></p>}
+                {!userId && <p className="text-sm text-amber-600 dark:text-amber-400 mt-1">👤 You're browsing as a guest - your picks will be saved locally until you sign up!</p>}
               </div>
             </div>
-            <Link 
-              href={leaderboardUrl}
-              className="mt-4 sm:mt-0 inline-flex items-center justify-center px-4 py-2 bg-gray-200 dark:bg-slate-800 border border-gray-300 dark:border-slate-700 text-gray-800 dark:text-slate-300 rounded-full hover:bg-gray-300 dark:hover:bg-slate-700 transition-colors"
-            >
-                <BarChart2 className="w-5 h-5 mr-2" />
-                View Leaderboard
-            </Link>
+            <div className="flex gap-3 mt-4 sm:mt-0">
+              <Link 
+                href={leaderboardUrl}
+                className="inline-flex items-center justify-center px-4 py-2 bg-gray-200 dark:bg-slate-800 border border-gray-300 dark:border-slate-700 text-gray-800 dark:text-slate-300 rounded-full hover:bg-gray-300 dark:hover:bg-slate-700 transition-colors"
+              >
+                  <BarChart2 className="w-5 h-5 mr-2" />
+                  View Leaderboard
+              </Link>
+              {!userId && (
+                <Link
+                  href="/signup"
+                  className="inline-flex items-center justify-center px-4 py-2 bg-green-600 text-white rounded-full hover:bg-green-700 transition-colors"
+                >
+                  <UserPlus className="w-4 h-4 mr-2" />
+                  Sign Up
+                </Link>
+              )}
+            </div>
         </div>
       </div>
 
+      {/* Rest of your existing picks interface stays the same */}
       <div className="space-y-8">
         {Object.entries(groupedEvents).map(([date, eventsOnDate]) => (
           <div key={date}>
@@ -275,7 +427,6 @@ console.table(gamePicks.map(p => ({
             </h2>
             <div className="space-y-6">
               {eventsOnDate.map(event => {
-                // FIXED: Removed the unused 'eventDate' variable
                 if (event.type === 'prop') {
                   const prop = event;
                   const userPick = picks[`prop_${prop.id}`];
@@ -381,13 +532,22 @@ console.table(gamePicks.map(p => ({
         <div>
             {success && <p className="text-green-600 font-semibold">{success}</p>}
             {error && <p className="text-red-600 font-semibold">{error}</p>}
+            {!userId && Object.keys(picks).length > 0 && (
+              <p className="text-amber-600 font-medium text-sm">
+                💾 {Object.keys(picks).length} picks saved locally
+              </p>
+            )}
         </div>
         <button 
           onClick={handleSubmitPicks}
           disabled={submitting}
-          className="px-8 py-3 bg-green-600 text-white font-bold rounded-md hover:bg-green-700 disabled:bg-gray-400 flex items-center"
+          className={`px-8 py-3 font-bold rounded-md flex items-center transition-colors ${
+            userId 
+              ? 'bg-green-600 text-white hover:bg-green-700 disabled:bg-gray-400' 
+              : 'bg-blue-600 text-white hover:bg-blue-700'
+          }`}
         >
-          {submitting ? 'Saving...' : 'Save My Picks'}
+          {submitting ? 'Saving...' : (userId ? 'Save My Picks' : 'Sign Up to Save')}
           <CheckCircle className="w-5 h-5 ml-2"/>
         </button>
       </div>

@@ -4,7 +4,7 @@ File: app/competitions/[id]/picks/page.tsx (Server Component)
 ================================================================================
 */
 
-import PicksClient from './PicksClient';
+import PicksClient from './CompetitionDetailClient';
 
 // This interface defines the shape of the props for the page
 interface Props {
