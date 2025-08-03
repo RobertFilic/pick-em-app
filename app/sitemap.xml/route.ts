@@ -1,23 +1,26 @@
 import { NextResponse } from 'next/server'
 
+const BASE_URL = 'https://playpredix.com'
+
+type Post = {
+  slug: string
+}
+
 export async function GET() {
-  const BASE_URL = 'https://yourdomain.com'
+  const response = await fetch(`${process.env.SUPABASE_URL}/rest/v1/posts`, {
+    headers: {
+      apikey: process.env.SUPABASE_ANON_KEY!,
+    },
+    cache: 'no-store',
+  })
+
+  const posts = (await response.json()) as Post[]
 
   const staticPages = ['', 'about', 'contact'].map(
     (page) => `${BASE_URL}/${page}`
   )
 
-  // Fetch dynamic content from Supabase
-  const response = await fetch(`${process.env.SUPABASE_URL}/rest/v1/posts`, {
-    headers: {
-      apikey: process.env.SUPABASE_ANON_KEY!,
-    },
-    cache: 'no-store', // optional: prevents caching
-  })
-
-  const posts = await response.json()
-
-  const dynamicPages = posts.map((post: any) => `${BASE_URL}/posts/${post.slug}`)
+  const dynamicPages = posts.map((post) => `${BASE_URL}/posts/${post.slug}`)
 
   const allPages = [...staticPages, ...dynamicPages]
 
