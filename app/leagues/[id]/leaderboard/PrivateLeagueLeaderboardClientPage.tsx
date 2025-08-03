@@ -29,7 +29,7 @@ type LeagueMember = {
   user_id: string;
   profiles: {
     username: string;
-  }[] | null;
+  } | null;
 };
 
 type UserPick = {
@@ -112,8 +112,8 @@ export default function PrivateLeagueLeaderboardClientPage({ leagueId }: { leagu
         setIsUserInLeague(!membershipError && membershipData !== null);
       }
 
-      // Get leaderboard data - we'll create this manually since the RPC might not exist
-      // First, get all league members with their profile info
+      // Get leaderboard data - use the working query structure
+      // Get all league members with their profile info
       const { data: members, error: membersError } = await supabase
         .from('league_members')
         .select(`
@@ -122,17 +122,24 @@ export default function PrivateLeagueLeaderboardClientPage({ leagueId }: { leagu
         `)
         .eq('league_id', leagueId);
 
-      if (membersError) throw membersError;
+      if (membersError) {
+        console.error('Members error:', membersError);
+        throw membersError;
+      }
 
       console.log('Members data:', members);
 
-      // Cast the members data to our expected type
-      const typedMembers = members as LeagueMember[] | null;
+      if (!members || members.length === 0) {
+        setLeaderboard([]);
+        return;
+      }
 
       // For each member, calculate their stats
-      const leaderboardPromises = typedMembers?.map(async (member: LeagueMember) => {
-        // Get username from the profile relation (profiles is an array, so take first element)
-        const username = member.profiles?.[0]?.username || 'Unknown User';
+      const leaderboardPromises = members.map(async (member: any) => {
+        // Get username from the profile relation - the structure shows profiles: {username: 'name'}
+        const username = member.profiles?.username || 'Unknown User';
+        
+        console.log(`Processing member ${member.user_id}, username: ${username}`);
         
         // Get user picks for this competition
         const { data: picks, error: picksError } = await supabase
@@ -182,7 +189,7 @@ export default function PrivateLeagueLeaderboardClientPage({ leagueId }: { leagu
           total_picks: correct + incorrect,
           is_admin: member.user_id === leagueData.admin_id
         };
-      }) || [];
+      });
 
       const leaderboardData = await Promise.all(leaderboardPromises);
       
