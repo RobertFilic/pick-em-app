@@ -14,7 +14,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { Trophy, Clock, Calendar, CheckCircle, BarChart2, HelpCircle, Users, LogIn, UserPlus, X } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useSearchParams, useRouter } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 
 // --- Type Definitions ---
 type Competition = { id: number; name: string; description: string | null; lock_date: string; allow_draws: boolean; };
@@ -83,7 +83,6 @@ export default function CompetitionDetailClient({ id }: { id: string }) {
   const [showAuthModal, setShowAuthModal] = useState(false);
 
   const competitionId = parseInt(id, 10);
-  const router = useRouter();
   
   const searchParams = useSearchParams();
   const leagueId = searchParams.get('leagueId');
@@ -393,7 +392,7 @@ export default function CompetitionDetailClient({ id }: { id: string }) {
               <div>
                 <h1 className="text-4xl font-bold">{competition.name}</h1>
                 {league && <p className="text-lg text-slate-400 flex items-center gap-2"><Users size={16}/> Playing in league: <strong>{league.name}</strong></p>}
-                {!userId && <p className="text-sm text-amber-600 dark:text-amber-400 mt-1">👤 You're browsing as a guest - your picks will be saved locally until you sign up!</p>}
+                {!userId && <p className="text-sm text-amber-600 dark:text-amber-400 mt-1">👤 You&apos;re browsing as a guest - your picks will be saved locally until you sign up!</p>}
               </div>
             </div>
             <div className="flex gap-3 mt-4 sm:mt-0">
