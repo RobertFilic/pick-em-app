@@ -11,11 +11,11 @@ export default function robots(): MetadataRoute.Robots {
       rules: [
         {
           userAgent: '*',
-          allow: '/',
+          allow: ['/', '/competitions/'],
           disallow: [
             '/api/',
-            '/leagues/',     // Block all league pages (private)
-            '/competitions/', // Block competition pages (require auth)
+            '/leagues/',           // Block all league pages (private)
+            '/competitions/*/picks', // Block pick-making pages (require auth)
             '/admin/',
             '/dashboard/',
           ],
