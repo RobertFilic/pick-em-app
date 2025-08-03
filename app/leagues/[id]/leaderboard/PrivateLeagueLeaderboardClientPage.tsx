@@ -25,7 +25,7 @@ type LeagueInfo = {
   competition_name?: string;
 };
 
-type LeagueMember = {
+type LeagueMemberData = {
   user_id: string;
   profiles: {
     username: string;
@@ -129,13 +129,16 @@ export default function PrivateLeagueLeaderboardClientPage({ leagueId }: { leagu
 
       console.log('Members data:', members);
 
-      if (!members || members.length === 0) {
+      // Cast the members data to our expected type (via unknown for type safety)
+      const typedMembers = members as unknown as LeagueMemberData[] | null;
+
+      if (!typedMembers || typedMembers.length === 0) {
         setLeaderboard([]);
         return;
       }
 
       // For each member, calculate their stats
-      const leaderboardPromises = members.map(async (member: any) => {
+      const leaderboardPromises = typedMembers.map(async (member: LeagueMemberData) => {
         // Get username from the profile relation - the structure shows profiles: {username: 'name'}
         const username = member.profiles?.username || 'Unknown User';
         
