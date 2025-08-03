@@ -14,8 +14,10 @@ export default function robots(): MetadataRoute.Robots {
           allow: '/',
           disallow: [
             '/api/',
-            '/leagues/*/manage',
+            '/leagues/',     // Block all league pages (private)
+            '/competitions/', // Block competition pages (require auth)
             '/admin/',
+            '/dashboard/',
           ],
         },
       ],
