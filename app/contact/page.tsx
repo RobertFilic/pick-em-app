@@ -1,7 +1,8 @@
-// app/terms/page.tsx
+// app/contact/page.tsx
 import Link from 'next/link';
+import { Mail, MessageCircle, HelpCircle } from 'lucide-react';
 
-export default function TermsPage() {
+export default function ContactPage() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       {/* Navigation */}
@@ -24,49 +25,81 @@ export default function TermsPage() {
       </nav>
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <h1 className="text-4xl font-bold mb-8 text-center">Terms of Service</h1>
+        <h1 className="text-4xl font-bold mb-8 text-center">Contact Us</h1>
         
-        <div className="bg-white dark:bg-gray-800 rounded-lg p-8 border border-gray-200 dark:border-gray-700">
-          <p className="text-gray-600 dark:text-gray-300 mb-6">
-            <strong>Last updated:</strong> [Date]
-          </p>
+        <div className="grid md:grid-cols-2 gap-8">
+          {/* Contact Info */}
+          <div>
+            <h2 className="text-2xl font-semibold mb-6">Get in Touch</h2>
+            <p className="text-gray-600 dark:text-gray-300 mb-6">
+              Have questions, feedback, or need support? We&apos;d love to hear from you!
+            </p>
+            
+            <div className="space-y-4">
+              <div className="flex items-center">
+                <Mail className="w-6 h-6 mr-3 text-blue-600" />
+                <div>
+                  <h3 className="font-semibold">Email Support</h3>
+                  <p className="text-gray-600 dark:text-gray-300">support@playpredix.com</p>
+                </div>
+              </div>
+              
+              <div className="flex items-center">
+                <MessageCircle className="w-6 h-6 mr-3 text-green-600" />
+                <div>
+                  <h3 className="font-semibold">General Inquiries</h3>
+                  <p className="text-gray-600 dark:text-gray-300">hello@playpredix.com</p>
+                </div>
+              </div>
+              
+              <div className="flex items-center">
+                <HelpCircle className="w-6 h-6 mr-3 text-purple-600" />
+                <div>
+                  <h3 className="font-semibold">FAQ</h3>
+                  <p className="text-gray-600 dark:text-gray-300">
+                    Check our{' '}
+                    <Link href="/about#faq" className="text-blue-600 hover:underline">
+                      FAQ section
+                    </Link>{' '}
+                    for quick answers
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
           
-          <div className="prose dark:prose-invert max-w-none">
-            <p className="mb-4">
-              These Terms of Service govern your use of PlayPredix and the services we provide.
-            </p>
-            
-            <h2 className="text-2xl font-semibold mt-6 mb-4">Acceptance of Terms</h2>
-            <p className="mb-4">
-              By accessing and using PlayPredix, you accept and agree to be bound by the terms 
-              and provision of this agreement.
-            </p>
-            
-            <h2 className="text-2xl font-semibold mt-6 mb-4">Use of Service</h2>
-            <p className="mb-4">
-              PlayPredix is a sports prediction platform for entertainment purposes. Users must 
-              be at least 13 years old to create an account.
-            </p>
-            
-            <h2 className="text-2xl font-semibold mt-6 mb-4">User Conduct</h2>
-            <p className="mb-4">
-              Users agree to use the service responsibly and not engage in activities that could 
-              harm other users or the platform.
-            </p>
-            
-            <h2 className="text-2xl font-semibold mt-6 mb-4">Changes to Terms</h2>
-            <p className="mb-4">
-              We reserve the right to modify these terms at any time. Continued use of the service 
-              constitutes acceptance of modified terms.
-            </p>
-            
-            <h2 className="text-2xl font-semibold mt-6 mb-4">Contact</h2>
-            <p>
-              Questions about these Terms should be sent to us at{' '}
-              <Link href="/contact" className="text-blue-600 hover:underline">
-                our contact page
-              </Link>.
-            </p>
+          {/* Contact Form */}
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
+            <h2 className="text-2xl font-semibold mb-6">Get in Touch</h2>
+            <div className="text-center">
+              <div className="mb-6">
+                <MessageCircle className="w-16 h-16 mx-auto mb-4 text-blue-600" />
+                <h3 className="text-xl font-semibold mb-2">Follow us on Twitter</h3>
+                <p className="text-gray-600 dark:text-gray-300 mb-4">
+                  The best way to reach us is through Twitter. We&apos;re active and respond quickly!
+                </p>
+              </div>
+              
+              <a
+                href="https://twitter.com/playpredix"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors font-semibold"
+              >
+                <MessageCircle className="w-5 h-5 mr-2" />
+                @PlayPredix on Twitter
+              </a>
+              
+              <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  You can also check our{' '}
+                  <Link href="/about" className="text-blue-600 hover:underline">
+                    FAQ section
+                  </Link>{' '}
+                  for quick answers to common questions.
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       </div>

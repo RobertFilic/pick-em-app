@@ -148,15 +148,15 @@ export default function AboutPage() {
                 <ul className="space-y-2 text-gray-600 dark:text-gray-300">
                   <li className="flex items-center">
                     <CheckCircle className="w-5 h-5 mr-2 text-green-500" />
-                    <strong>1 point</strong> for each correct game prediction
+                    <span><strong>1 point</strong> for each correct game prediction</span>
                   </li>
                   <li className="flex items-center">
                     <CheckCircle className="w-5 h-5 mr-2 text-green-500" />
-                    <strong>1 point</strong> for each correct answer to prediction questions
+                    <span><strong>1 point</strong> for each correct answer to prediction questions</span>
                   </li>
                   <li className="flex items-center">
                     <CheckCircle className="w-5 h-5 mr-2 text-green-500" />
-                    <strong>0 points</strong> for incorrect predictions
+                    <span><strong>0 points</strong> for incorrect predictions</span>
                   </li>
                 </ul>
               </div>
