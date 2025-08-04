@@ -6,18 +6,18 @@
     "allow_draws": false
   },
   "teams": [
-    { "name": "Argentina", "logo_url": "https://flagcdn.com/w320/ar.png" },
-    { "name": "Bahamas", "logo_url": "https://flagcdn.com/w320/bs.png" },
-    { "name": "Brazil", "logo_url": "https://flagcdn.com/w320/br.png" },
-    { "name": "Canada", "logo_url": "https://flagcdn.com/w320/ca.png" },
-    { "name": "Colombia", "logo_url": "https://flagcdn.com/w320/co.png" },
-    { "name": "Dominican Republic", "logo_url": "https://flagcdn.com/w320/do.png" },
-    { "name": "Nicaragua", "logo_url": "https://flagcdn.com/w320/ni.png" },
-    { "name": "Panama", "logo_url": "https://flagcdn.com/w320/pa.png" },
-    { "name": "Puerto Rico", "logo_url": "https://flagcdn.com/w320/pr.png" },
-    { "name": "Uruguay", "logo_url": "https://flagcdn.com/w320/uy.png" },
-    { "name": "USA", "logo_url": "https://flagcdn.com/w320/us.png" },
-    { "name": "Venezuela", "logo_url": "https://flagcdn.com/w320/ve.png" }
+    { "name": "Argentina", "logo_url": "https://upload.wikimedia.org/wikipedia/commons/1/1a/Flag_of_Argentina.svg" },
+    { "name": "Bahamas", "logo_url": "https://upload.wikimedia.org/wikipedia/commons/9/93/Flag_of_the_Bahamas.svg" },
+    { "name": "Brazil", "logo_url": "https://upload.wikimedia.org/wikipedia/en/0/05/Flag_of_Brazil.svg" },
+    { "name": "Canada", "logo_url": "https://upload.wikimedia.org/wikipedia/commons/d/d9/Flag_of_Canada_%28Pantone%29.svg" },
+    { "name": "Colombia", "logo_url": "https://upload.wikimedia.org/wikipedia/commons/2/21/Flag_of_Colombia.svg" },
+    { "name": "Dominican Republic", "logo_url": "https://upload.wikimedia.org/wikipedia/commons/9/9f/Flag_of_the_Dominican_Republic.svg" },
+    { "name": "Nicaragua", "logo_url": "https://upload.wikimedia.org/wikipedia/commons/1/19/Flag_of_Nicaragua.svg" },
+    { "name": "Panama", "logo_url": "https://upload.wikimedia.org/wikipedia/commons/a/ab/Flag_of_Panama.svg" },
+    { "name": "Puerto Rico", "logo_url": "https://upload.wikimedia.org/wikipedia/commons/2/28/Flag_of_Puerto_Rico.svg" },
+    { "name": "Uruguay", "logo_url": "https://upload.wikimedia.org/wikipedia/commons/f/fe/Flag_of_Uruguay.svg" },
+    { "name": "USA", "logo_url": "https://upload.wikimedia.org/wikipedia/en/a/a4/Flag_of_the_United_States.svg" },
+    { "name": "Venezuela", "logo_url": "https://upload.wikimedia.org/wikipedia/commons/0/06/Flag_of_Venezuela.svg" }
   ],
   "team_groupings": [
     { "team": "USA", "group": "Group A" },

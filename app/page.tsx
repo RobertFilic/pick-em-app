@@ -274,7 +274,7 @@ function UnifiedDashboard({ user }: { user: User | null }) {
                         </p>
                         <div className="flex gap-3">
                             <Link
-                                href="/signup"
+                                href="/login"
                                 className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
                             >
                                 <UserPlus className="w-4 h-4" />
