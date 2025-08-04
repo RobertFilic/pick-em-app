@@ -168,6 +168,7 @@ export default function CompetitionDetailClient({ id }: { id: string }) {
   }, [loadTempPicks, groupedEvents, competitionId, leagueId, storageKey]);
 
   const fetchCompetitionData = useCallback(async (currentUserId: string | null) => {
+    console.log('fetchCompetitionData called with userId:', currentUserId, 'competitionId:', competitionId);
     setLoading(true);
     setError(null);
     try {
@@ -236,6 +237,7 @@ export default function CompetitionDetailClient({ id }: { id: string }) {
   }, [competitionId, leagueId, loadTempPicks]);
 
   useEffect(() => {
+    console.log('Main useEffect triggered, competitionId:', competitionId, 'leagueId:', leagueId);
     const getAndSetUser = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       setUserId(user?.id || null);
@@ -262,7 +264,7 @@ export default function CompetitionDetailClient({ id }: { id: string }) {
     return () => {
       authListener.subscription.unsubscribe();
     };
-  }, [fetchCompetitionData, transferTempPicks]);
+  }, [competitionId, leagueId]); // Removed fetchCompetitionData and transferTempPicks from dependencies
   
   const handlePickChange = (type: 'game' | 'prop', id: number, pickValue: string) => {
     const key = `${type}_${id}`;
