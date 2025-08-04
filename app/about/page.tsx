@@ -163,11 +163,17 @@ export default function AboutPage() {
               
               <div>
                 <h3 className="text-xl font-semibold mb-3">Leaderboard Rankings</h3>
-                <p className="text-gray-600 dark:text-gray-300">
-                  Players are ranked by total points scored. In case of ties, the player with more 
-                  total predictions made is ranked higher. Leaderboards update in real-time as 
+                <p className="text-gray-600 dark:text-gray-300 mb-3">
+                  Players are ranked by total points scored. Leaderboards update in real-time as 
                   games conclude and results are confirmed.
                 </p>
+                <p className="text-gray-600 dark:text-gray-300">
+                  <strong>Tiebreaker:</strong> If multiple players have the same score, they are ranked by:
+                </p>
+                <ol className="list-decimal list-inside mt-2 text-gray-600 dark:text-gray-300 ml-4">
+                  <li>Total number of predictions made (more predictions = higher rank)</li>
+                  <li>Time of last prediction (earlier submission = higher rank)</li>
+                </ol>
               </div>
               
               <div>
