@@ -78,9 +78,6 @@ export default function Header() {
               <Link href="/about" className="text-sm font-medium text-gray-600 hover:text-blue-600 dark:text-gray-300 dark:hover:text-blue-400 transition-colors">
                 About
               </Link>
-              <Link href="/contact" className="text-sm font-medium text-gray-600 hover:text-blue-600 dark:text-gray-300 dark:hover:text-blue-400 transition-colors">
-                Contact
-              </Link>
             </div>
 
             {/* User Actions */}
@@ -111,7 +108,7 @@ export default function Header() {
                   <Link href="/login" className="text-sm font-medium text-gray-600 hover:text-blue-600 dark:text-gray-300 dark:hover:text-blue-400 transition-colors">
                     Login
                   </Link>
-                  <Link href="/signup" className="text-sm font-medium bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors">
+                  <Link href="/login" className="text-sm font-medium bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors">
                     Sign Up
                   </Link>
                 </div>
@@ -139,13 +136,6 @@ export default function Header() {
                 className="block text-sm font-medium text-gray-600 hover:text-blue-600 dark:text-gray-300 dark:hover:text-blue-400 transition-colors py-2"
               >
                 About
-              </Link>
-              <Link
-                href="/contact"
-                onClick={closeMobileMenu}
-                className="block text-sm font-medium text-gray-600 hover:text-blue-600 dark:text-gray-300 dark:hover:text-blue-400 transition-colors py-2"
-              >
-                Contact
               </Link>
 
               {/* User Actions */}
@@ -199,6 +189,9 @@ export default function Header() {
               {/* Footer Links in Mobile Menu */}
               <div className="pt-4 border-t border-gray-200 dark:border-gray-700 mt-4">
                 <div className="text-xs text-gray-500 dark:text-gray-400 space-x-4">
+                  <Link href="/contact" onClick={closeMobileMenu} className="hover:text-blue-600 dark:hover:text-blue-400">
+                    Contact
+                  </Link>
                   <Link href="/privacy" onClick={closeMobileMenu} className="hover:text-blue-600 dark:hover:text-blue-400">
                     Privacy
                   </Link>

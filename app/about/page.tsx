@@ -265,7 +265,7 @@ export default function AboutPage() {
                 <ArrowRight className="w-5 h-5 ml-2" />
               </Link>
               <Link
-                href="/signup"
+                href="/login"
                 className="bg-transparent border-2 border-white text-white px-6 py-3 rounded-full font-semibold hover:bg-white hover:text-blue-600 transition-colors"
               >
                 Sign Up Free

@@ -27,10 +27,6 @@ export default function TermsPage() {
         <h1 className="text-4xl font-bold mb-8 text-center">Terms of Service</h1>
         
         <div className="bg-white dark:bg-gray-800 rounded-lg p-8 border border-gray-200 dark:border-gray-700">
-          <p className="text-gray-600 dark:text-gray-300 mb-6">
-            <strong>Last updated:</strong> [Date]
-          </p>
-          
           <div className="prose dark:prose-invert max-w-none">
             <p className="mb-4">
               These Terms of Service govern your use of PlayPredix and the services we provide.
