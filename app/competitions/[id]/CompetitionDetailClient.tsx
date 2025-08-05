@@ -1,14 +1,14 @@
 /*
 ================================================================================
-File: app/competitions/[id]/CompetitionDetailClient.tsx (Final Fixed Version)
+File: app/competitions/[id]/CompetitionDetailClient.tsx (Complete Fixed Version)
 ================================================================================
-This version works for both authenticated and non-authenticated users.
-Fixed the tab-switching loading issue by preventing redundant auth refetches.
+Fixed the infinite loop issue by removing circular dependencies and using refs
+to track state without causing re-renders.
 */
 
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { Trophy, Clock, Calendar, CheckCircle, BarChart2, HelpCircle, Users, LogIn, UserPlus, X } from 'lucide-react';
 import Image from 'next/image';
@@ -80,6 +80,20 @@ export default function CompetitionDetailClient({ id }: { id: string }) {
   const [success, setSuccess] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [showAuthModal, setShowAuthModal] = useState(false);
+
+  // Use refs to track state without causing re-renders
+  const loadingRef = useRef(loading);
+  const userIdRef = useRef(userId);
+  const hasInitializedRef = useRef(false);
+
+  // Update refs when state changes
+  useEffect(() => {
+    loadingRef.current = loading;
+  }, [loading]);
+
+  useEffect(() => {
+    userIdRef.current = userId;
+  }, [userId]);
 
   const competitionId = parseInt(id, 10);
   
@@ -247,7 +261,11 @@ export default function CompetitionDetailClient({ id }: { id: string }) {
     }
   }, [competitionId, leagueId, loadTempPicks]);
 
+  // Initial load - only runs once
   useEffect(() => {
+    if (hasInitializedRef.current) return;
+    hasInitializedRef.current = true;
+
     const getAndSetUser = async () => {
       const { data: { user }, error } = await supabase.auth.getUser();
       if (error) {
@@ -257,15 +275,29 @@ export default function CompetitionDetailClient({ id }: { id: string }) {
       await fetchCompetitionData(user?.id || null);
     };
     getAndSetUser();
+  }, [fetchCompetitionData]);
 
-    // Listen for auth changes - FIXED VERSION
+  // Auth listener - separate effect to avoid dependency issues
+  useEffect(() => {
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log('🏆 Auth state change:', event, session ? `User: ${session.user.id}` : 'No session');
       const newUserId = session?.user?.id || null;
       
-      // FIXED: Ignore auth events if we're already loaded and have the same user
-      if (!loading && newUserId && newUserId === userId) {
-        console.log('🏆 Ignoring redundant auth event - already loaded with same user');
+      // Skip INITIAL_SESSION events - we handle initial load separately
+      if (event === 'INITIAL_SESSION') {
+        console.log('🏆 Skipping INITIAL_SESSION event');
+        return;
+      }
+      
+      // Only handle actual auth changes after initial load
+      if (!hasInitializedRef.current) {
+        console.log('🏆 Skipping auth event - not yet initialized');
+        return;
+      }
+
+      // Ignore redundant events for the same user
+      if (newUserId && newUserId === userIdRef.current && !loadingRef.current) {
+        console.log('🏆 Ignoring redundant auth event - same user, already loaded');
         return;
       }
       
@@ -284,7 +316,7 @@ export default function CompetitionDetailClient({ id }: { id: string }) {
     return () => {
       authListener.subscription.unsubscribe();
     };
-  }, [competitionId, leagueId, fetchCompetitionData, transferTempPicks, loading, userId]);
+  }, [fetchCompetitionData, transferTempPicks]);
   
   const handlePickChange = (type: 'game' | 'prop', id: number, pickValue: string) => {
     const key = `${type}_${id}`;
