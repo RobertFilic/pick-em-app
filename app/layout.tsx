@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Inter, Plus_Jakarta_Sans } from 'next/font/google';
 import './globals.css';
 import Header from '@/components/Header';
+import Script from 'next/script';
 
 // Load fonts with CSS variable support
 const plusJakartaSans = Plus_Jakarta_Sans({ 
@@ -15,12 +16,12 @@ const inter = Inter({
   variable: '--font-inter',
 });
 
-// SEO OPTIMIZED: Merged your original metadata with the SEO-focused content
+// SEO OPTIMIZED: Updated metadata for PlayPredix
 export const metadata: Metadata = {
-  title: "Pick'em App | EuroBasket 2025 Challenge",
-  description: 'Join the ultimate EuroBasket 2025 pick em challenge. Compete with friends, track your score on the live leaderboard, and prove your basketball knowledge.',
-  keywords: 'EuroBasket 2025, Pick em, Basketball Prediction Game, Office Pool, Sports Betting Game',
-  authors: [{ name: "Pick'em Team" }],
+  title: "PlayPredix | Sports Prediction Competitions",
+  description: 'Join sports prediction competitions, compete with friends in private leagues, and test your sports knowledge. Make picks, track scores, and climb the leaderboards!',
+  keywords: 'Sports Predictions, Pick Em, Private Leagues, Sports Competition, Leaderboard, Friends Competition',
+  authors: [{ name: "PlayPredix Team" }],
   viewport: 'width=device-width, initial-scale=1, maximum-scale=1',
   themeColor: [
     { media: '(prefers-color-scheme: light)', color: '#ffffff' },
@@ -36,26 +37,46 @@ interface RootLayoutProps {
 }
 
 export default function RootLayout({ children }: RootLayoutProps) {
-  // SEO OPTIMIZED: Added JSON-LD structured data for the SportsEvent
+  // SEO OPTIMIZED: Updated JSON-LD structured data for PlayPredix
   const jsonLd = {
     '@context': 'https://schema.org',
-    '@type': 'SportsEvent',
-    name: "FIBA EuroBasket 2025 Pick'em Challenge",
-    startDate: '2025-08-27',
-    endDate: '2025-09-14',
-    description: 'A friendly prediction game for the FIBA EuroBasket 2025 tournament.',
-    location: {
-      '@type': 'Place',
-      name: 'Cyprus, Finland, Latvia, Poland',
+    '@type': 'WebApplication',
+    name: 'PlayPredix',
+    description: 'Sports prediction platform for competing with friends',
+    url: 'https://www.playpredix.com',
+    applicationCategory: 'SportsApplication',
+    operatingSystem: 'Any',
+    offers: {
+      '@type': 'Offer',
+      price: '0',
+      priceCurrency: 'USD',
     },
-    organizer: {
+    author: {
       '@type': 'Organization',
-      name: "Pick'em App",
+      name: 'PlayPredix',
     },
   };
 
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        {/* Google Analytics */}
+        <Script
+          src="https://www.googletagmanager.com/gtag/js?id=G-21G3K64HXG"
+          strategy="afterInteractive"
+        />
+        <Script id="google-analytics" strategy="afterInteractive">
+          {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', 'G-21G3K64HXG', {
+              page_title: document.title,
+              page_location: window.location.href,
+            });
+          `}
+        </Script>
+      </head>
       <body
         className={`
           ${plusJakartaSans.variable} 

@@ -1,22 +1,51 @@
 // app/contact/page.tsx
+'use client';
+
+import { useEffect } from 'react';
 import Link from 'next/link';
 import { MessageCircle } from 'lucide-react';
+import { analytics } from '@/lib/analytics';
 
 export default function ContactPage() {
+  useEffect(() => {
+    analytics.trackPageView('/contact', 'Contact Us');
+  }, []);
+
+  const handleTwitterClick = () => {
+    analytics.trackTwitterClick('contact');
+    analytics.trackExternalLinkClick('https://twitter.com/playpredix', 'contact_page');
+  };
+
+  const handleNavClick = (destination: string) => {
+    analytics.trackNavigation('contact', destination, 'click');
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       {/* Navigation */}
       <nav className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-4">
-            <Link href="/" className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+            <Link 
+              href="/" 
+              onClick={() => handleNavClick('/')}
+              className="text-2xl font-bold text-blue-600 dark:text-blue-400"
+            >
               PlayPredix
             </Link>
             <div className="flex gap-4">
-              <Link href="/" className="text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400">
+              <Link 
+                href="/" 
+                onClick={() => handleNavClick('/')}
+                className="text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400"
+              >
                 Home
               </Link>
-              <Link href="/about" className="text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400">
+              <Link 
+                href="/about" 
+                onClick={() => handleNavClick('/about')}
+                className="text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400"
+              >
                 About
               </Link>
             </div>
@@ -39,6 +68,7 @@ export default function ContactPage() {
               href="https://twitter.com/playpredix"
               target="_blank"
               rel="noopener noreferrer"
+              onClick={handleTwitterClick}
               className="inline-flex items-center justify-center px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors font-semibold"
             >
               <MessageCircle className="w-5 h-5 mr-2" />
