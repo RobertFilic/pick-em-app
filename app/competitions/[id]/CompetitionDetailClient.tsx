@@ -1,14 +1,16 @@
 /*
 ================================================================================
-File: app/competitions/[id]/CompetitionDetailClient.tsx (With Analytics Tracking)
+File: app/competitions/[id]/CompetitionDetailClient.tsx (Updated for Both Users)
 ================================================================================
+This version works for both authenticated and non-authenticated users.
+Non-authenticated users can make picks (stored in localStorage) and are prompted
+to register/login when trying to save.
 */
 
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
-import { analytics } from '@/lib/analytics';
 import { Trophy, Clock, Calendar, CheckCircle, BarChart2, HelpCircle, Users, LogIn, UserPlus, X } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -79,7 +81,6 @@ export default function CompetitionDetailClient({ id }: { id: string }) {
   const [success, setSuccess] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [showAuthModal, setShowAuthModal] = useState(false);
-  const [hasTrackedFirstPick, setHasTrackedFirstPick] = useState(false);
 
   const competitionId = parseInt(id, 10);
   
@@ -100,7 +101,6 @@ export default function CompetitionDetailClient({ id }: { id: string }) {
           return JSON.parse(tempPicks);
         } catch (e) {
           console.error('Error parsing temp picks:', e);
-          analytics.trackError('localStorage', 'Failed to parse temp picks', 'loadTempPicks');
         }
       }
     }
@@ -110,21 +110,14 @@ export default function CompetitionDetailClient({ id }: { id: string }) {
   // Save picks to localStorage for non-authenticated users
   const saveTempPicks = useCallback((newPicks: { [key: string]: string }) => {
     if (typeof window !== 'undefined') {
-      try {
-        localStorage.setItem(storageKey, JSON.stringify(newPicks));
-      } catch (e) {
-        console.error('Error saving temp picks:', e);
-        analytics.trackError('localStorage', 'Failed to save temp picks', 'saveTempPicks');
-      }
+      localStorage.setItem(storageKey, JSON.stringify(newPicks));
     }
   }, [storageKey]);
 
   // Transfer temporary picks to authenticated user account
   const transferTempPicks = useCallback(async (newUserId: string) => {
     const tempPicks = loadTempPicks();
-    const picksCount = Object.keys(tempPicks).length;
-    
-    if (picksCount === 0) return;
+    if (Object.keys(tempPicks).length === 0) return;
 
     try {
       const allEvents = Object.values(groupedEvents).flat();
@@ -163,34 +156,21 @@ export default function CompetitionDetailClient({ id }: { id: string }) {
         if (propUpsertError) throw propUpsertError;
       }
 
-      // Track successful transfer
-      analytics.trackGuestPicksTransferred(picksCount, competitionId.toString());
-
       // Clear temporary picks after successful transfer
       localStorage.removeItem(storageKey);
-      
       setSuccess("Your picks have been saved successfully!");
       setTimeout(() => setSuccess(null), 3000);
 
     } catch (error) {
       console.error('Error transferring picks:', error);
-      analytics.trackError('pick_transfer', error instanceof Error ? error.message : 'Unknown error', 'transferTempPicks');
       setError("Error transferring your picks. Please try again.");
     }
   }, [loadTempPicks, groupedEvents, competitionId, leagueId, storageKey]);
 
   const fetchCompetitionData = useCallback(async (currentUserId: string | null) => {
     console.log('fetchCompetitionData called with userId:', currentUserId, 'competitionId:', competitionId);
-    
-    // Prevent reload if we already have the competition data for the same user state
-    if (competition && ((!currentUserId && !userId) || (currentUserId === userId))) {
-      console.log('Skipping reload - data already loaded for current user state');
-      return;
-    }
-    
     setLoading(true);
     setError(null);
-    
     try {
       // League data (only for authenticated users with leagueId)
       if (leagueId && currentUserId) {
@@ -209,13 +189,6 @@ export default function CompetitionDetailClient({ id }: { id: string }) {
 
       if (competitionRes.error) throw competitionRes.error;
       setCompetition(competitionRes.data);
-
-      // Track competition view
-      analytics.trackCompetitionView(
-        competitionRes.data.id.toString(),
-        competitionRes.data.name,
-        currentUserId ? 'authenticated' : 'guest'
-      );
 
       // Load existing picks
       let existingPicks = {};
@@ -256,9 +229,8 @@ export default function CompetitionDetailClient({ id }: { id: string }) {
       setPicks(existingPicks);
 
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "An unknown error occurred";
-      analytics.trackError('competition_load', errorMessage, 'fetchCompetitionData');
-      setError(errorMessage);
+      if (err instanceof Error) { setError(err.message); } 
+      else { setError("An unknown error occurred"); }
     } finally {
       setLoading(false);
     }
@@ -266,67 +238,38 @@ export default function CompetitionDetailClient({ id }: { id: string }) {
 
   useEffect(() => {
     console.log('Main useEffect triggered, competitionId:', competitionId, 'leagueId:', leagueId);
-    
-    let mounted = true; // Flag to prevent state updates if component unmounts
-    
     const getAndSetUser = async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (mounted) {
-        setUserId(user?.id || null);
-        await fetchCompetitionData(user?.id || null);
-      }
+      setUserId(user?.id || null);
+      await fetchCompetitionData(user?.id || null);
     };
     getAndSetUser();
 
     // Listen for auth changes
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (!mounted) return; // Don't update if component is unmounted
-      
       const newUserId = session?.user?.id || null;
+      setUserId(newUserId);
       
-      // Only update if the user actually changed
-      if (newUserId !== userId) {
-        setUserId(newUserId);
-        
-        if (event === 'SIGNED_IN' && newUserId) {
-          // Track login
-          analytics.trackUserLogin();
-          
-          // User just signed in - transfer any temporary picks
-          await transferTempPicks(newUserId);
-          // Reload data as authenticated user
-          await fetchCompetitionData(newUserId);
-        } else if (event === 'SIGNED_OUT') {
-          analytics.trackUserLogout();
-          await fetchCompetitionData(null);
-        } else if (event === 'INITIAL_SESSION') {
-          // This fires when returning to tab - don't reload if we already have data
-          if (!competition) {
-            await fetchCompetitionData(newUserId);
-          }
-        }
+      if (event === 'SIGNED_IN' && newUserId) {
+        // User just signed in - transfer any temporary picks
+        await transferTempPicks(newUserId);
+        // Reload data as authenticated user
+        await fetchCompetitionData(newUserId);
+      } else {
+        // User signed out or initial load
+        await fetchCompetitionData(newUserId);
       }
     });
 
     return () => {
-      mounted = false; // Cleanup flag
       authListener.subscription.unsubscribe();
     };
-  }, [competitionId, leagueId]); // Removed userId from dependencies to prevent loops
+  }, [competitionId, leagueId]); // Removed fetchCompetitionData and transferTempPicks from dependencies
   
   const handlePickChange = (type: 'game' | 'prop', id: number, pickValue: string) => {
     const key = `${type}_${id}`;
     const newPicks = { ...picks, [key]: pickValue };
     setPicks(newPicks);
-    
-    // Track the pick
-    analytics.trackPickMade(type, competitionId.toString(), !userId, pickValue);
-    
-    // Track first pick milestone
-    if (!hasTrackedFirstPick && Object.keys(picks).length === 0) {
-      analytics.trackMilestone('first_pick', 1, competitionId.toString());
-      setHasTrackedFirstPick(true);
-    }
     
     // Save to localStorage for non-authenticated users
     if (!userId) {
@@ -335,15 +278,8 @@ export default function CompetitionDetailClient({ id }: { id: string }) {
   };
 
   const handleSubmitPicks = async () => {
-    const picksCount = Object.keys(picks).length;
-    
-    // Track submit attempt
-    analytics.trackPicksSubmitAttempt(!userId, picksCount);
-    
     if (!userId) {
       // Non-authenticated user - show auth modal
-      analytics.trackAuthPromptShown('save_picks');
-      analytics.trackModalOpen('auth');
       setShowAuthModal(true);
       return;
     }
@@ -396,34 +332,19 @@ export default function CompetitionDetailClient({ id }: { id: string }) {
         if (propUpsertError) throw propUpsertError;
       }
 
-      // Track successful save
-      analytics.trackPicksSaved(picksCount, competitionId.toString(), leagueId || undefined);
-      
       setSuccess("Your picks have been saved successfully!");
       setTimeout(() => setSuccess(null), 3000);
 
     } catch (upsertError) {
       console.error('Detailed upsert error:', upsertError);
-      const errorMessage = upsertError instanceof Error ? upsertError.message : "An unknown error occurred while saving picks.";
-      analytics.trackError('picks_save', errorMessage, 'handleSubmitPicks');
-      setError(errorMessage);
+      if (upsertError instanceof Error) { 
+        setError(upsertError.message); 
+      } else { 
+        setError("An unknown error occurred while saving picks."); 
+      }
     } finally {
       setSubmitting(false);
     }
-  };
-
-  const handleAuthModalClose = () => {
-    analytics.trackModalClose('auth');
-    setShowAuthModal(false);
-  };
-
-  const handleLeaderboardClick = () => {
-    const leaderboardType = leagueId ? 'league' : 'competition';
-    const leaderboardId = leagueId || competitionId.toString();
-    const leaderboardName = league?.name || competition?.name;
-    
-    analytics.trackLeaderboardView(leaderboardType, leaderboardId, leaderboardName);
-    analytics.trackNavigation(`competition_${competitionId}`, leaderboardUrl, 'click');
   };
 
   if (loading) { return <div className="text-center p-10">Loading...</div>; }
@@ -437,7 +358,7 @@ export default function CompetitionDetailClient({ id }: { id: string }) {
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-[1000]">
           <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-8 rounded-2xl w-full max-w-md relative">
             <button 
-              onClick={handleAuthModalClose}
+              onClick={() => setShowAuthModal(false)} 
               className="absolute top-4 right-4 text-gray-500 dark:text-slate-400 hover:text-black dark:hover:text-white"
             >
               <X size={24} />
@@ -448,8 +369,7 @@ export default function CompetitionDetailClient({ id }: { id: string }) {
             </p>
             <div className="flex gap-3">
               <Link
-                href="/login"
-                onClick={() => analytics.trackNavigation('competition_auth_modal', '/login', 'click')}
+                href="/signup"
                 className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
               >
                 <UserPlus className="w-4 h-4" />
@@ -457,7 +377,6 @@ export default function CompetitionDetailClient({ id }: { id: string }) {
               </Link>
               <Link
                 href="/login"
-                onClick={() => analytics.trackNavigation('competition_auth_modal', '/login', 'click')}
                 className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
               >
                 <LogIn className="w-4 h-4" />
@@ -481,7 +400,6 @@ export default function CompetitionDetailClient({ id }: { id: string }) {
             <div className="flex gap-3 mt-4 sm:mt-0">
               <Link 
                 href={leaderboardUrl}
-                onClick={handleLeaderboardClick}
                 className="inline-flex items-center justify-center px-4 py-2 bg-gray-200 dark:bg-slate-800 border border-gray-300 dark:border-slate-700 text-gray-800 dark:text-slate-300 rounded-full hover:bg-gray-300 dark:hover:bg-slate-700 transition-colors"
               >
                   <BarChart2 className="w-5 h-5 mr-2" />
@@ -489,8 +407,7 @@ export default function CompetitionDetailClient({ id }: { id: string }) {
               </Link>
               {!userId && (
                 <Link
-                  href="/login"
-                  onClick={() => analytics.trackNavigation('competition_header', '/login', 'click')}
+                  href="/signup"
                   className="inline-flex items-center justify-center px-4 py-2 bg-green-600 text-white rounded-full hover:bg-green-700 transition-colors"
                 >
                   <UserPlus className="w-4 h-4 mr-2" />
