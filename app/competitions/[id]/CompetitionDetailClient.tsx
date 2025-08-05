@@ -1,6 +1,6 @@
 /*
 ================================================================================
-File: app/competitions/[id]/CompetitionDetailClient.tsx (Updated for Both Users)
+File: app/competitions/[id]/CompetitionDetailClient.tsx (Complete with Debug Logging)
 ================================================================================
 This version works for both authenticated and non-authenticated users.
 Non-authenticated users can make picks (stored in localStorage) and are prompted
@@ -94,13 +94,16 @@ export default function CompetitionDetailClient({ id }: { id: string }) {
 
   // Load picks from localStorage for non-authenticated users
   const loadTempPicks = useCallback(() => {
+    console.log('🏆 COMPETITION: loadTempPicks called with storageKey:', storageKey);
     if (typeof window !== 'undefined') {
       const tempPicks = localStorage.getItem(storageKey);
       if (tempPicks) {
         try {
-          return JSON.parse(tempPicks);
+          const parsed = JSON.parse(tempPicks);
+          console.log('🏆 COMPETITION: Loaded temp picks from localStorage:', Object.keys(parsed).length);
+          return parsed;
         } catch (e) {
-          console.error('Error parsing temp picks:', e);
+          console.error('🏆 COMPETITION: Error parsing temp picks:', e);
         }
       }
     }
@@ -109,6 +112,7 @@ export default function CompetitionDetailClient({ id }: { id: string }) {
 
   // Save picks to localStorage for non-authenticated users
   const saveTempPicks = useCallback((newPicks: { [key: string]: string }) => {
+    console.log('🏆 COMPETITION: saveTempPicks called with picks:', Object.keys(newPicks).length);
     if (typeof window !== 'undefined') {
       localStorage.setItem(storageKey, JSON.stringify(newPicks));
     }
@@ -116,8 +120,12 @@ export default function CompetitionDetailClient({ id }: { id: string }) {
 
   // Transfer temporary picks to authenticated user account
   const transferTempPicks = useCallback(async (newUserId: string) => {
+    console.log('🏆 COMPETITION: transferTempPicks called for user:', newUserId);
     const tempPicks = loadTempPicks();
-    if (Object.keys(tempPicks).length === 0) return;
+    if (Object.keys(tempPicks).length === 0) {
+      console.log('🏆 COMPETITION: No temp picks to transfer');
+      return;
+    }
 
     try {
       const allEvents = Object.values(groupedEvents).flat();
@@ -131,6 +139,8 @@ export default function CompetitionDetailClient({ id }: { id: string }) {
 
       const gamePicks = payload.filter(p => p.game_id !== null);
       const propPicks = payload.filter(p => p.prop_prediction_id !== null);
+
+      console.log('🏆 COMPETITION: Transferring picks - games:', gamePicks.length, 'props:', propPicks.length);
 
       // Save game picks
       for (const gamePick of gamePicks) {
@@ -162,23 +172,36 @@ export default function CompetitionDetailClient({ id }: { id: string }) {
       setTimeout(() => setSuccess(null), 3000);
 
     } catch (error) {
-      console.error('Error transferring picks:', error);
+      console.error('🏆 COMPETITION: Error transferring picks:', error);
       setError("Error transferring your picks. Please try again.");
     }
   }, [loadTempPicks, groupedEvents, competitionId, leagueId, storageKey]);
 
   const fetchCompetitionData = useCallback(async (currentUserId: string | null) => {
-    console.log('fetchCompetitionData called with userId:', currentUserId, 'competitionId:', competitionId);
+    console.log('🏆 COMPETITION: fetchCompetitionData called with userId:', currentUserId, 'competitionId:', competitionId);
+    console.log('🏆 COMPETITION: Current loading state:', loading);
+    console.log('🏆 COMPETITION: Document readyState:', document.readyState);
+    console.log('🏆 COMPETITION: Window location:', window.location.href);
+    
     setLoading(true);
     setError(null);
+    
     try {
+      console.log('🏆 COMPETITION: Starting data fetch...');
+      
       // League data (only for authenticated users with leagueId)
       if (leagueId && currentUserId) {
+        console.log('🏆 COMPETITION: Fetching league data for:', leagueId);
         const { data: leagueData, error: leagueError } = await supabase.from('leagues').select('id, name').eq('id', leagueId).single();
-        if (leagueError) throw leagueError;
+        if (leagueError) {
+          console.error('🏆 COMPETITION: League error:', leagueError);
+          throw leagueError;
+        }
+        console.log('🏆 COMPETITION: League data:', leagueData);
         setLeague(leagueData);
       }
 
+      console.log('🏆 COMPETITION: Fetching competition data...');
       // Public competition data (available to everyone)
       const [competitionRes, gamesRes, groupingsRes, propPredictionsRes] = await Promise.all([
         supabase.from('competitions').select('*').eq('id', competitionId).single(),
@@ -187,12 +210,25 @@ export default function CompetitionDetailClient({ id }: { id: string }) {
         supabase.from('prop_predictions').select('*').eq('competition_id', competitionId),
       ]);
 
-      if (competitionRes.error) throw competitionRes.error;
+      console.log('🏆 COMPETITION: DB Results:', {
+        competition: competitionRes.data,
+        competitionError: competitionRes.error,
+        gamesCount: gamesRes.data?.length,
+        gamesError: gamesRes.error,
+        groupingsCount: groupingsRes.data?.length,
+        propsCount: propPredictionsRes.data?.length
+      });
+
+      if (competitionRes.error) {
+        console.error('🏆 COMPETITION: Competition fetch error:', competitionRes.error);
+        throw competitionRes.error;
+      }
       setCompetition(competitionRes.data);
 
       // Load existing picks
       let existingPicks = {};
       if (currentUserId) {
+        console.log('🏆 COMPETITION: Loading picks for authenticated user');
         // Authenticated user - load from database
         let picksQuery = supabase.from('user_picks').select('game_id, prop_prediction_id, pick').eq('user_id', currentUserId).eq('competition_id', competitionId);
         if (leagueId) {
@@ -201,7 +237,11 @@ export default function CompetitionDetailClient({ id }: { id: string }) {
           picksQuery = picksQuery.is('league_id', null);
         }
         const { data: picksData, error: picksError } = await picksQuery;
-        if (picksError) throw picksError;
+        if (picksError) {
+          console.error('🏆 COMPETITION: Picks fetch error:', picksError);
+          throw picksError;
+        }
+        console.log('🏆 COMPETITION: Loaded picks:', picksData?.length);
 
         existingPicks = picksData.reduce((acc, pick) => {
           const key = pick.game_id ? `game_${pick.game_id}` : `prop_${pick.prop_prediction_id}`;
@@ -209,10 +249,13 @@ export default function CompetitionDetailClient({ id }: { id: string }) {
           return acc;
         }, {} as { [key: string]: string });
       } else {
+        console.log('🏆 COMPETITION: Loading picks from localStorage');
         // Non-authenticated user - load from localStorage
         existingPicks = loadTempPicks();
       }
+      console.log('🏆 COMPETITION: Existing picks loaded:', Object.keys(existingPicks).length);
 
+      // Process and set data
       const groupMap = groupingsRes.data!.reduce((acc, item) => { acc[item.team_id] = item.group; return acc; }, {} as { [key: number]: string });
       const gamesWithGroups: Event[] = gamesRes.data!.map(game => ({ ...game, group: game.team_a ? groupMap[game.team_a.id] : null, type: 'game' }));
       const propsWithType: Event[] = propPredictionsRes.data!.map(p => ({ ...p, type: 'prop' }));
@@ -225,21 +268,38 @@ export default function CompetitionDetailClient({ id }: { id: string }) {
         return acc;
       }, {} as { [key: string]: Event[] });
       
+      console.log('🏆 COMPETITION: Processed events by date:', Object.keys(eventsByDate));
+      
       setGroupedEvents(eventsByDate);
       setPicks(existingPicks);
 
+      console.log('🏆 COMPETITION: Data fetch completed successfully');
+
     } catch (err) {
-      if (err instanceof Error) { setError(err.message); } 
-      else { setError("An unknown error occurred"); }
+      console.error('🏆 COMPETITION: Fetch error:', err);
+      if (err instanceof Error) { 
+        setError(err.message); 
+      } else { 
+        setError("An unknown error occurred"); 
+      }
     } finally {
+      console.log('🏆 COMPETITION: Setting loading to false');
       setLoading(false);
     }
   }, [competitionId, leagueId, loadTempPicks]);
 
   useEffect(() => {
-    console.log('Main useEffect triggered, competitionId:', competitionId, 'leagueId:', leagueId);
+    console.log('🏆 COMPETITION: Main useEffect triggered, competitionId:', competitionId, 'leagueId:', leagueId);
+    console.log('🏆 COMPETITION: Document visibility:', document.visibilityState);
+    console.log('🏆 COMPETITION: Window focus:', document.hasFocus());
+    
     const getAndSetUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      console.log('🏆 COMPETITION: Getting user session...');
+      const { data: { user }, error } = await supabase.auth.getUser();
+      if (error) {
+        console.error('🏆 COMPETITION: Auth error:', error);
+      }
+      console.log('🏆 COMPETITION: Auth user result:', user ? `User ID: ${user.id}` : 'No user');
       setUserId(user?.id || null);
       await fetchCompetitionData(user?.id || null);
     };
@@ -247,24 +307,55 @@ export default function CompetitionDetailClient({ id }: { id: string }) {
 
     // Listen for auth changes
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('🏆 COMPETITION: Auth state change:', event, session ? `User: ${session.user.id}` : 'No session');
       const newUserId = session?.user?.id || null;
       setUserId(newUserId);
       
       if (event === 'SIGNED_IN' && newUserId) {
+        console.log('🏆 COMPETITION: User signed in, transferring picks...');
         // User just signed in - transfer any temporary picks
         await transferTempPicks(newUserId);
         // Reload data as authenticated user
         await fetchCompetitionData(newUserId);
       } else {
+        console.log('🏆 COMPETITION: Auth change, refetching data...');
         // User signed out or initial load
         await fetchCompetitionData(newUserId);
       }
     });
 
     return () => {
+      console.log('🏆 COMPETITION: Cleaning up auth listener');
       authListener.subscription.unsubscribe();
     };
   }, [competitionId, leagueId]); // Removed fetchCompetitionData and transferTempPicks from dependencies
+
+  // Add visibility change listener to debug tab switching
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      console.log('🏆 COMPETITION: Visibility changed:', document.visibilityState);
+      console.log('🏆 COMPETITION: Current loading state:', loading);
+    };
+
+    const handleFocus = () => {
+      console.log('🏆 COMPETITION: Window focused');
+      console.log('🏆 COMPETITION: Current loading state:', loading);
+    };
+
+    const handleBlur = () => {
+      console.log('🏆 COMPETITION: Window blurred');
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleFocus);
+    window.addEventListener('blur', handleBlur);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleFocus);
+      window.removeEventListener('blur', handleBlur);
+    };
+  }, [loading]);
   
   const handlePickChange = (type: 'game' | 'prop', id: number, pickValue: string) => {
     const key = `${type}_${id}`;
@@ -347,9 +438,20 @@ export default function CompetitionDetailClient({ id }: { id: string }) {
     }
   };
 
-  if (loading) { return <div className="text-center p-10">Loading...</div>; }
-  if (error) { return <div className="text-center p-10 text-red-500">Error: {error}</div>; }
-  if (!competition) { return <div className="text-center p-10">Competition not found.</div>; }
+  if (loading) { 
+    console.log('🏆 COMPETITION: Rendering loading state');
+    return <div className="text-center p-10">Loading...</div>; 
+  }
+  if (error) { 
+    console.log('🏆 COMPETITION: Rendering error state:', error);
+    return <div className="text-center p-10 text-red-500">Error: {error}</div>; 
+  }
+  if (!competition) { 
+    console.log('🏆 COMPETITION: Rendering not found state');
+    return <div className="text-center p-10">Competition not found.</div>; 
+  }
+
+  console.log('🏆 COMPETITION: Rendering competition data');
 
   return (
     <div>
@@ -418,7 +520,7 @@ export default function CompetitionDetailClient({ id }: { id: string }) {
         </div>
       </div>
 
-      {/* Rest of your existing picks interface stays the same */}
+      {/* Events by Date */}
       <div className="space-y-8">
         {Object.entries(groupedEvents).map(([date, eventsOnDate]) => (
           <div key={date}>
