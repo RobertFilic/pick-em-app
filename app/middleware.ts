@@ -46,15 +46,18 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(new URL('/login', request.url))
     }
 
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('is_admin')
-      .eq('id', user.id)
-      .single()
+  const { data: profile, error } = await supabase
+    .from('profiles')
+    .select('is_admin')
+    .eq('id', user.id)
+    .limit(1)
 
-    if (!profile?.is_admin) {
-      return NextResponse.redirect(new URL('/', request.url)) // Redirect non-admins to homepage
-    }
+  // Handle the response as an array and add error handling
+  const isAdmin = profile && profile.length > 0 ? profile[0].is_admin : false;
+
+  if (error || !isAdmin) {
+    return NextResponse.redirect(new URL('/', request.url)) // Redirect non-admins to homepage
+  }
   }
 
   return response
