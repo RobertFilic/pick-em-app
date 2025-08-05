@@ -80,7 +80,6 @@ export default function CompetitionDetailClient({ id }: { id: string }) {
   const [userId, setUserId] = useState<string | null>(null);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [hasTrackedFirstPick, setHasTrackedFirstPick] = useState(false);
-  const [initialLoadComplete, setInitialLoadComplete] = useState(false);
 
   const competitionId = parseInt(id, 10);
   
@@ -183,8 +182,8 @@ export default function CompetitionDetailClient({ id }: { id: string }) {
   const fetchCompetitionData = useCallback(async (currentUserId: string | null) => {
     console.log('fetchCompetitionData called with userId:', currentUserId, 'competitionId:', competitionId);
     
-    // Prevent reload if we already have the competition data and user state hasn't changed
-    if (initialLoadComplete && competition && ((!currentUserId && !userId) || (currentUserId === userId))) {
+    // Prevent reload if we already have the competition data for the same user state
+    if (competition && ((!currentUserId && !userId) || (currentUserId === userId))) {
       console.log('Skipping reload - data already loaded for current user state');
       return;
     }
@@ -255,7 +254,6 @@ export default function CompetitionDetailClient({ id }: { id: string }) {
       
       setGroupedEvents(eventsByDate);
       setPicks(existingPicks);
-      setInitialLoadComplete(true);
 
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "An unknown error occurred";
