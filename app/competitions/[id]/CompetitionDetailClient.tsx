@@ -80,6 +80,7 @@ export default function CompetitionDetailClient({ id }: { id: string }) {
   const [userId, setUserId] = useState<string | null>(null);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [hasTrackedFirstPick, setHasTrackedFirstPick] = useState(false);
+  const [initialLoadComplete, setInitialLoadComplete] = useState(false);
 
   const competitionId = parseInt(id, 10);
   
@@ -181,6 +182,13 @@ export default function CompetitionDetailClient({ id }: { id: string }) {
 
   const fetchCompetitionData = useCallback(async (currentUserId: string | null) => {
     console.log('fetchCompetitionData called with userId:', currentUserId, 'competitionId:', competitionId);
+    
+    // Prevent reload if we already have the competition data and user state hasn't changed
+    if (initialLoadComplete && competition && ((!currentUserId && !userId) || (currentUserId === userId))) {
+      console.log('Skipping reload - data already loaded for current user state');
+      return;
+    }
+    
     setLoading(true);
     setError(null);
     
@@ -247,6 +255,7 @@ export default function CompetitionDetailClient({ id }: { id: string }) {
       
       setGroupedEvents(eventsByDate);
       setPicks(existingPicks);
+      setInitialLoadComplete(true);
 
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "An unknown error occurred";
@@ -259,39 +268,53 @@ export default function CompetitionDetailClient({ id }: { id: string }) {
 
   useEffect(() => {
     console.log('Main useEffect triggered, competitionId:', competitionId, 'leagueId:', leagueId);
+    
+    let mounted = true; // Flag to prevent state updates if component unmounts
+    
     const getAndSetUser = async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      setUserId(user?.id || null);
-      await fetchCompetitionData(user?.id || null);
+      if (mounted) {
+        setUserId(user?.id || null);
+        await fetchCompetitionData(user?.id || null);
+      }
     };
     getAndSetUser();
 
     // Listen for auth changes
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
-      const newUserId = session?.user?.id || null;
-      setUserId(newUserId);
+      if (!mounted) return; // Don't update if component is unmounted
       
-      if (event === 'SIGNED_IN' && newUserId) {
-        // Track login
-        analytics.trackUserLogin();
+      const newUserId = session?.user?.id || null;
+      
+      // Only update if the user actually changed
+      if (newUserId !== userId) {
+        setUserId(newUserId);
         
-        // User just signed in - transfer any temporary picks
-        await transferTempPicks(newUserId);
-        // Reload data as authenticated user
-        await fetchCompetitionData(newUserId);
-      } else if (event === 'SIGNED_OUT') {
-        analytics.trackUserLogout();
-        await fetchCompetitionData(null);
-      } else {
-        // Initial load or other auth events
-        await fetchCompetitionData(newUserId);
+        if (event === 'SIGNED_IN' && newUserId) {
+          // Track login
+          analytics.trackUserLogin();
+          
+          // User just signed in - transfer any temporary picks
+          await transferTempPicks(newUserId);
+          // Reload data as authenticated user
+          await fetchCompetitionData(newUserId);
+        } else if (event === 'SIGNED_OUT') {
+          analytics.trackUserLogout();
+          await fetchCompetitionData(null);
+        } else if (event === 'INITIAL_SESSION') {
+          // This fires when returning to tab - don't reload if we already have data
+          if (!competition) {
+            await fetchCompetitionData(newUserId);
+          }
+        }
       }
     });
 
     return () => {
+      mounted = false; // Cleanup flag
       authListener.subscription.unsubscribe();
     };
-  }, [competitionId, leagueId]);
+  }, [competitionId, leagueId]); // Removed userId from dependencies to prevent loops
   
   const handlePickChange = (type: 'game' | 'prop', id: number, pickValue: string) => {
     const key = `${type}_${id}`;

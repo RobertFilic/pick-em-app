@@ -1,0 +1,72 @@
+{
+  "competition": {
+    "name": "EuroBasket Daily Challenge",
+    "description": "A special 10-day challenge featuring one marquee matchup each day from the EuroBasket 2025 teams.",
+    "lock_date": "2025-08-06T18:00:00.000Z",
+    "allow_draws": false
+  },
+  "teams": [],
+  "team_groupings": [],
+  "games": [
+    {
+      "team_a": "Spain",
+      "team_b": "Italy",
+      "game_date": "2025-08-06T18:00:00.000Z",
+      "stage": "Daily Challenge"
+    },
+    {
+      "team_a": "France",
+      "team_b": "Germany",
+      "game_date": "2025-08-07T18:00:00.000Z",
+      "stage": "Daily Challenge"
+    },
+    {
+      "team_a": "Serbia",
+      "team_b": "Slovenia",
+      "game_date": "2025-08-08T18:00:00.000Z",
+      "stage": "Daily Challenge"
+    },
+    {
+      "team_a": "Greece",
+      "team_b": "Lithuania",
+      "game_date": "2025-08-09T18:00:00.000Z",
+      "stage": "Daily Challenge"
+    },
+    {
+      "team_a": "Turkey",
+      "team_b": "Poland",
+      "game_date": "2025-08-10T18:00:00.000Z",
+      "stage": "Daily Challenge"
+    },
+    {
+      "team_a": "Czechia",
+      "team_b": "Finland",
+      "game_date": "2025-08-11T18:00:00.000Z",
+      "stage": "Daily Challenge"
+    },
+    {
+      "team_a": "Latvia",
+      "team_b": "Belgium",
+      "game_date": "2025-08-12T18:00:00.000Z",
+      "stage": "Daily Challenge"
+    },
+    {
+      "team_a": "Montenegro",
+      "team_b": "Georgia",
+      "game_date": "2025-08-13T18:00:00.000Z",
+      "stage": "Daily Challenge"
+    },
+    {
+      "team_a": "Israel",
+      "team_b": "Bosnia and Herzegovina",
+      "game_date": "2025-08-14T18:00:00.000Z",
+      "stage": "Daily Challenge"
+    },
+    {
+      "team_a": "Estonia",
+      "team_b": "Great Britain",
+      "game_date": "2025-08-15T18:00:00.000Z",
+      "stage": "Daily Challenge"
+    }
+  ]
+}

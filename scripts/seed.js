@@ -6,8 +6,10 @@ require('dotenv').config({ path: path.resolve(__dirname, '../.env.local') });
 // Get the data from the JSON file
 //const data = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../data/eurobasket2025.json'), 'utf-8'));
 //const data = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../data/FIBAAfroBasket2025.json'), 'utf-8'));
-const data = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../data/FIBAAmeriCup2025.json'), 'utf-8'));
+//const data = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../data/FIBAAmeriCup2025.json'), 'utf-8'));
 //const data = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../data/FIBAAsiaCup2025.json'), 'utf-8'));
+const data = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../data/FakeData082025.json'), 'utf-8'));
+
 
 
 // Supabase client initialization
