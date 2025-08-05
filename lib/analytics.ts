@@ -6,9 +6,7 @@ declare global {
     gtag: (
       command: 'config' | 'event' | 'js' | 'set',
       targetId: string | Date,
-      config?: {
-        [key: string]: any;
-      }
+      config?: Record<string, unknown>
     ) => void;
   }
 }
@@ -16,9 +14,7 @@ declare global {
 // Generic event tracking function
 export const trackEvent = (
   eventName: string,
-  parameters?: {
-    [key: string]: any;
-  }
+  parameters?: Record<string, unknown>
 ) => {
   if (typeof window !== 'undefined' && window.gtag) {
     window.gtag('event', eventName, parameters);

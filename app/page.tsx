@@ -297,11 +297,7 @@ function UnifiedDashboard({ user }: { user: User | null }) {
         });
     };
 
-    const handleAuthRequired = () => {
-        analytics.trackAuthPromptShown('create_league');
-        analytics.trackModalOpen('auth');
-        setShowAuthModal(true);
-    };
+
 
     const handleModalOpen = (modalType: 'create_league' | 'join_league') => {
         analytics.trackModalOpen(modalType);
