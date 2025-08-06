@@ -144,99 +144,109 @@ function UnifiedDashboard({ user }: { user: User | null }) {
     }, []);
 
     const fetchDashboardData = useCallback(async () => {
-        console.log('🏠 DASHBOARD: fetchDashboardData called with user:', user ? user.id : 'No user');
+    console.log('🏠 DASHBOARD: fetchDashboardData called with user:', user ? user.id : 'No user');
+    
+    try {
+        console.log('🏠 DASHBOARD: Fetching public competitions...');
+        // Always fetch public competitions (available to everyone)
+        const { data: competitionsData, error: competitionsError } = await supabase
+            .from('competitions')
+            .select('id, name, description, lock_date, created_at');
         
-        try {
-            console.log('🏠 DASHBOARD: Fetching public competitions...');
-            // Always fetch public competitions (available to everyone)
-            const { data: competitionsData, error: competitionsError } = await supabase
-                .from('competitions')
-                .select('id, name, description, lock_date, created_at');
-            
-            if (competitionsError) {
-                console.error('🏠 DASHBOARD: Competitions fetch error:', competitionsError);
-            } else {
-                console.log('🏠 DASHBOARD: Competitions loaded:', competitionsData?.length);
-                if (competitionsData) {
-                    // Fetch first game date for each competition to use as start date
-                    const competitionsWithStartDate = await Promise.all(
-                        competitionsData.map(async (comp) => {
-                            try {
-                                const { data: firstGame } = await supabase
-                                    .from('games')
-                                    .select('game_date')
-                                    .eq('competition_id', comp.id)
-                                    .order('game_date', { ascending: true })
-                                    .limit(1)
-                                    .single();
-                                
-                                return {
-                                    ...comp,
-                                    startDate: firstGame?.game_date || comp.lock_date || comp.created_at
-                                };
-                            } catch (error) {
-                                // If no games found, use lock_date or created_at
-                                console.log('No games found for competition:', comp.id, error);
-                                return {
-                                    ...comp,
-                                    startDate: comp.lock_date || comp.created_at
-                                };
-                            }
-                        })
-                    );
+        if (competitionsError) {
+            console.error('🏠 DASHBOARD: Competitions fetch error:', competitionsError);
+        } else {
+            console.log('🏠 DASHBOARD: Competitions loaded:', competitionsData?.length);
+            if (competitionsData) {
+                // Fetch first game date for each competition to use as start date
+                const competitionsWithStartDate = await Promise.all(
+                    competitionsData.map(async (comp) => {
+                        try {
+                            const { data: firstGame } = await supabase
+                                .from('games')
+                                .select('game_date')
+                                .eq('competition_id', comp.id)
+                                .order('game_date', { ascending: true })
+                                .limit(1)
+                                .single();
+                            
+                            return {
+                                ...comp,
+                                startDate: firstGame?.game_date || comp.lock_date || comp.created_at
+                            };
+                        } catch (error) {
+                            // If no games found, use lock_date or created_at
+                            console.log('No games found for competition:', comp.id, error);
+                            return {
+                                ...comp,
+                                startDate: comp.lock_date || comp.created_at
+                            };
+                        }
+                    })
+                );
 
-                    setPublicCompetitions(competitionsWithStartDate);
-                    
-                    // Set initial sorted competitions
-                    const sorted = sortCompetitions(competitionsWithStartDate, sortOrder);
-                    setFilteredCompetitions(sorted);
-                    
-                    if (competitionsWithStartDate.length > 0 && !selectedCompId && user) {
-                        setSelectedCompId(competitionsWithStartDate[0].id);
-                    }
-                }
-            }
-
-            // Only fetch user-specific data if authenticated
-            if (user) {
-                console.log('🏠 DASHBOARD: Fetching user profile...');
-                const { data: profileData, error: profileError } = await supabase.from('profiles').select('*').eq('id', user.id).single();
+                setPublicCompetitions(competitionsWithStartDate);
                 
-                if (profileError) {
-                    console.error('🏠 DASHBOARD: Profile fetch error:', profileError);
-                } else {
-                    console.log('🏠 DASHBOARD: Profile loaded:', profileData?.username);
-                    setProfile(profileData);
-                }
-
-                console.log('🏠 DASHBOARD: Fetching leagues...');
-                const { data: leaguesData, error: leaguesError } = await supabase
-                    .from('leagues')
-                    .select(`*, competitions(name), league_members(profiles(username))`)
-                    .order('created_at', { ascending: false });
-
-                if (leaguesError) {
-                    console.error("🏠 DASHBOARD: Error fetching leagues:", leaguesError);
-                    analytics.trackError('leagues_fetch', leaguesError.message, 'fetchDashboardData');
-                } else {
-                    console.log('🏠 DASHBOARD: Leagues loaded:', leaguesData?.length);
-                    setLeagues(leaguesData as League[]);
+                // Set initial sorted competitions - use current sortOrder from state
+                const currentSortOrder = sortOrder; // This will use the current value
+                const sorted = [...competitionsWithStartDate].sort((a, b) => {
+                    const dateA = new Date(a.startDate || a.created_at || '').getTime();
+                    const dateB = new Date(b.startDate || b.created_at || '').getTime();
                     
-                    // Track milestones
-                    if (leaguesData.length === 1) {
-                        analytics.trackMilestone('first_league_member', 1, 'dashboard');
+                    if (currentSortOrder === 'newest') {
+                        return dateB - dateA; // Newest first
+                    } else {
+                        return dateA - dateB; // Oldest first
                     }
+                });
+                setFilteredCompetitions(sorted);
+                
+                if (competitionsWithStartDate.length > 0 && !selectedCompId && user) {
+                    setSelectedCompId(competitionsWithStartDate[0].id);
                 }
             }
-            
-            console.log('🏠 DASHBOARD: Data fetch completed');
-            setLoading(false);
-        } catch (error) {
-            console.error('🏠 DASHBOARD: Error fetching dashboard data:', error);
-            analytics.trackError('dashboard_fetch', error instanceof Error ? error.message : 'Unknown error', 'fetchDashboardData');
-            setLoading(false);
         }
-    }, [user, selectedCompId, sortCompetitions, sortOrder]);
+
+        // Only fetch user-specific data if authenticated
+        if (user) {
+            console.log('🏠 DASHBOARD: Fetching user profile...');
+            const { data: profileData, error: profileError } = await supabase.from('profiles').select('*').eq('id', user.id).single();
+            
+            if (profileError) {
+                console.error('🏠 DASHBOARD: Profile fetch error:', profileError);
+            } else {
+                console.log('🏠 DASHBOARD: Profile loaded:', profileData?.username);
+                setProfile(profileData);
+            }
+
+            console.log('🏠 DASHBOARD: Fetching leagues...');
+            const { data: leaguesData, error: leaguesError } = await supabase
+                .from('leagues')
+                .select(`*, competitions(name), league_members(profiles(username))`)
+                .order('created_at', { ascending: false });
+
+            if (leaguesError) {
+                console.error("🏠 DASHBOARD: Error fetching leagues:", leaguesError);
+                analytics.trackError('leagues_fetch', leaguesError.message, 'fetchDashboardData');
+            } else {
+                console.log('🏠 DASHBOARD: Leagues loaded:', leaguesData?.length);
+                setLeagues(leaguesData as League[]);
+                
+                // Track milestones
+                if (leaguesData.length === 1) {
+                    analytics.trackMilestone('first_league_member', 1, 'dashboard');
+                }
+            }
+        }
+        
+        console.log('🏠 DASHBOARD: Data fetch completed');
+        setLoading(false);
+    } catch (error) {
+        console.error('🏠 DASHBOARD: Error fetching dashboard data:', error);
+        analytics.trackError('dashboard_fetch', error instanceof Error ? error.message : 'Unknown error', 'fetchDashboardData');
+        setLoading(false);
+    }
+}, []); // Remove all dependencies - the function will use current state values
 
     // Update filtered competitions when sort order changes
     useEffect(() => {
@@ -252,7 +262,7 @@ function UnifiedDashboard({ user }: { user: User | null }) {
         
         // Track page view
         analytics.trackPageView('/', 'Homepage');
-    }, [fetchDashboardData, user]);
+    }, [user]);
 
     const handleSortChange = (newSortOrder: 'newest' | 'oldest') => {
         setSortOrder(newSortOrder);
