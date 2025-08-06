@@ -15,19 +15,6 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 
-interface GtagFunction {
-  (command: 'config', targetId: string, config?: Record<string, unknown>): void;
-  (command: 'event', eventName: string, eventParameters?: Record<string, unknown>): void;
-  (command: 'js', date: Date): void;
-  (command: 'set', config: Record<string, unknown>): void;
-}
-
-declare global {
-  interface Window {
-    gtag?: GtagFunction;
-    dataLayer?: Record<string, unknown>[];
-  }
-}
 
 // --- Type Definitions ---
 type Competition = { id: number; name: string; description: string | null; lock_date: string; allow_draws: boolean; };
@@ -39,8 +26,11 @@ type League = { id: string; name: string; };
 
 const PICKS_STORAGE_KEY = 'temp_picks_';
 const trackEvent = (eventName: string, parameters?: Record<string, unknown>) => {
-  if (typeof window !== 'undefined' && window.gtag) {
-    window.gtag('event', eventName, parameters);
+  if (typeof window !== 'undefined' && 'gtag' in window) {
+    const gtag = (window as any).gtag;
+    if (typeof gtag === 'function') {
+      gtag('event', eventName, parameters);
+    }
   }
 };
 
