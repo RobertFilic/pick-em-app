@@ -15,6 +15,20 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 
+interface GtagFunction {
+  (command: 'config', targetId: string, config?: object): void;
+  (command: 'event', eventName: string, eventParameters?: object): void;
+  (command: 'js', date: Date): void;
+  (command: 'set', config: object): void;
+}
+
+declare global {
+  interface Window {
+    gtag?: GtagFunction;
+    dataLayer?: any[];
+  }
+}
+
 // --- Type Definitions ---
 type Competition = { id: number; name: string; description: string | null; lock_date: string; allow_draws: boolean; };
 type Team = { id: number; name: string; logo_url: string | null; };
@@ -24,6 +38,11 @@ type Event = (Game & { type: 'game' }) | (PropPrediction & { type: 'prop' });
 type League = { id: string; name: string; };
 
 const PICKS_STORAGE_KEY = 'temp_picks_';
+const trackEvent = (eventName: string, parameters?: Record<string, any>) => {
+  if (typeof window !== 'undefined' && window.gtag) {
+    window.gtag('event', eventName, parameters);
+  }
+};
 
 // --- Helper Function to Build the Payload ---
 function buildPicksPayload({
@@ -331,10 +350,19 @@ export default function CompetitionDetailClient({ id }: { id: string }) {
 
   const handleSubmitPicks = async () => {
     if (!userId) {
+      trackEvent('submit_picks_guest', {
+        total_picks: Object.keys(picks).length,
+        competition_id: competitionId
+      }); 
       // Non-authenticated user - show auth modal
       setShowAuthModal(true);
       return;
     }
+    // Track submission attempt
+      trackEvent('submit_picks_start', {
+        total_picks: Object.keys(picks).length,
+        competition_id: competitionId
+      });
 
     // Authenticated user - save picks normally
     setSubmitting(true);
@@ -383,6 +411,13 @@ export default function CompetitionDetailClient({ id }: { id: string }) {
         });
         if (propUpsertError) throw propUpsertError;
       }
+
+      trackEvent('submit_picks_success', {
+        total_picks: payload.length,
+        competition_id: competitionId,
+        game_picks: gamePicks.length,
+        prop_picks: propPicks.length
+      });
 
       setSuccess("Your picks have been saved successfully!");
       setTimeout(() => setSuccess(null), 3000);
@@ -458,6 +493,13 @@ export default function CompetitionDetailClient({ id }: { id: string }) {
             <div className="flex gap-3 mt-4 sm:mt-0">
               <Link 
                 href={leaderboardUrl}
+                  onClick={() => {
+                    trackEvent('view_leaderboard', {
+                      competition_id: competitionId,
+                      league_id: leagueId || null,
+                      source: 'competition_page'
+                    });
+                  }}
                 className="inline-flex items-center justify-center px-4 py-2 bg-gray-200 dark:bg-slate-800 border border-gray-300 dark:border-slate-700 text-gray-800 dark:text-slate-300 rounded-full hover:bg-gray-300 dark:hover:bg-slate-700 transition-colors"
               >
                   <BarChart2 className="w-5 h-5 mr-2" />
@@ -466,6 +508,13 @@ export default function CompetitionDetailClient({ id }: { id: string }) {
               {!userId && (
                 <Link
                   href="/signup"
+                  onClick={() => {
+                  trackEvent('signup_click', {
+                    source: 'competition_page',
+                    competition_id: competitionId,
+                    total_picks: Object.keys(picks).length
+                  });
+                }}
                   className="inline-flex items-center justify-center px-4 py-2 bg-green-600 text-white rounded-full hover:bg-green-700 transition-colors"
                 >
                   <UserPlus className="w-4 h-4 mr-2" />
