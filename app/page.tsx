@@ -176,6 +176,7 @@ function UnifiedDashboard({ user }: { user: User | null }) {
                                 };
                             } catch (error) {
                                 // If no games found, use lock_date or created_at
+                                console.log('No games found for competition:', comp.id, error);
                                 return {
                                     ...comp,
                                     startDate: comp.lock_date || comp.created_at
@@ -251,7 +252,7 @@ function UnifiedDashboard({ user }: { user: User | null }) {
         
         // Track page view
         analytics.trackPageView('/', 'Homepage');
-    }, [fetchDashboardData]);
+    }, [fetchDashboardData, user]);
 
     const handleSortChange = (newSortOrder: 'newest' | 'oldest') => {
         setSortOrder(newSortOrder);
