@@ -16,16 +16,16 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 
 interface GtagFunction {
-  (command: 'config', targetId: string, config?: object): void;
-  (command: 'event', eventName: string, eventParameters?: object): void;
+  (command: 'config', targetId: string, config?: Record<string, unknown>): void;
+  (command: 'event', eventName: string, eventParameters?: Record<string, unknown>): void;
   (command: 'js', date: Date): void;
-  (command: 'set', config: object): void;
+  (command: 'set', config: Record<string, unknown>): void;
 }
 
 declare global {
   interface Window {
     gtag?: GtagFunction;
-    dataLayer?: any[];
+    dataLayer?: Record<string, unknown>[];
   }
 }
 
@@ -38,7 +38,7 @@ type Event = (Game & { type: 'game' }) | (PropPrediction & { type: 'prop' });
 type League = { id: string; name: string; };
 
 const PICKS_STORAGE_KEY = 'temp_picks_';
-const trackEvent = (eventName: string, parameters?: Record<string, any>) => {
+const trackEvent = (eventName: string, parameters?: Record<string, unknown>) => {
   if (typeof window !== 'undefined' && window.gtag) {
     window.gtag('event', eventName, parameters);
   }
