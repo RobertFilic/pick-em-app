@@ -27,6 +27,7 @@ type League = { id: string; name: string; };
 const PICKS_STORAGE_KEY = 'temp_picks_';
 const trackEvent = (eventName: string, parameters?: Record<string, unknown>) => {
   if (typeof window !== 'undefined' && 'gtag' in window) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const gtag = (window as any).gtag;
     if (typeof gtag === 'function') {
       gtag('event', eventName, parameters);
