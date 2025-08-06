@@ -18,19 +18,90 @@ const inter = Inter({
 
 // SEO OPTIMIZED: Updated metadata for PlayPredix
 export const metadata: Metadata = {
-  title: "PlayPredix | Sports Prediction Competitions",
-  description: 'Join sports prediction competitions, compete with friends in private leagues, and test your sports knowledge. Make picks, track scores, and climb the leaderboards!',
-  keywords: 'Sports Predictions, Pick Em, Private Leagues, Sports Competition, Leaderboard, Friends Competition',
+  title: "PlayPredix | Sports Prediction Competitions with Friends",
+  description: 'Join sports prediction competitions, compete with friends in private leagues, and test your sports knowledge. Make picks, track scores, and climb the leaderboards! Free to play.',
+  
+  // Enhanced SEO
+  keywords: [
+    'sports predictions',
+    'pick em games',
+    'private leagues',
+    'sports competition',
+    'leaderboard',
+    'friends competition',
+    'basketball predictions',
+    'sports betting alternative',
+    'prediction contest',
+    'fantasy sports'
+  ].join(', '),
+  
   authors: [{ name: "PlayPredix Team" }],
+  creator: "PlayPredix",
+  publisher: "PlayPredix",
+  
+  // Open Graph for social sharing
+  openGraph: {
+    title: "PlayPredix - Sports Prediction Competitions",
+    description: 'Compete with friends in sports prediction games. Create private leagues and see who knows sports best!',
+    url: 'https://www.playpredix.com',
+    siteName: 'PlayPredix',
+    type: 'website',
+    locale: 'en_US',
+    images: [
+      {
+        url: '/og-image.jpg', // You'll need to add this image to your public folder
+        width: 1200,
+        height: 630,
+        alt: 'PlayPredix - Sports Prediction Competitions',
+      }
+    ],
+  },
+  
+  // Twitter Card
+  twitter: {
+    card: 'summary_large_image',
+    title: 'PlayPredix - Sports Prediction Competitions',
+    description: 'Compete with friends in sports prediction games!',
+    creator: '@playpredix',
+    images: ['/og-image.jpg'],
+  },
+  
+  // Additional metadata
   viewport: 'width=device-width, initial-scale=1, maximum-scale=1',
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
+  },
+  
+  // Schema.org verification (you already have this)
+  verification: {
+    google: 'ID924kGiPoGLZv2L2ZlqV1kCddoPuOJdWv4qB44scqE',
+  },
+  
+  // Theme colors (you already have this)
   themeColor: [
     { media: '(prefers-color-scheme: light)', color: '#ffffff' },
     { media: '(prefers-color-scheme: dark)', color: '#0a0a0a' },
   ],
-  other: {
-    'google-site-verification': 'ID924kGiPoGLZv2L2ZlqV1kCddoPuOJdWv4qB44scqE',
+  
+  // Additional useful metadata
+  category: 'Sports',
+  classification: 'Sports Prediction Game',
+  
+  // Canonical URL
+  alternates: {
+    canonical: 'https://www.playpredix.com',
   },
 };
+
+//////////////////////////// Metadata ////////////////////////////
 
 interface RootLayoutProps {
   children: React.ReactNode;
@@ -55,6 +126,15 @@ export default function RootLayout({ children }: RootLayoutProps) {
       '@type': 'Organization',
       name: 'PlayPredix',
     },
+
+    // Features
+      featureList: [
+        'Create private leagues with friends',
+        'Make sports predictions',
+        'Real-time leaderboards',
+        'Multiple competition types',
+        'Free to play'
+      ],    
   };
 
   return (
