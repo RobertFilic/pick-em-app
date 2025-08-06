@@ -193,6 +193,11 @@ export default function AuthPage() {
           </div>
 
           <div className="p-6 pt-0">
+            <div className="text-center mb-4">
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+              You'll be redirected to Google to sign in securely
+            </p>
+          </div>
             <button
               onClick={handleGoogleLogin}
               className="w-full inline-flex items-center justify-center rounded-md text-sm font-medium border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800 h-10 px-4 py-2"
