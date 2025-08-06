@@ -82,7 +82,7 @@ export const metadata: Metadata = {
   
   // Schema.org verification (you already have this)
   verification: {
-    google: 'VDx18hfyNcZCSk4yAFtOldi_8X1tZy5qhspt2a7SjTc',
+    google: 'vRXsLqBqTwdlK2XX4QD-_gC6VYh1syxpmXwhJrzvjJE',
   },
   
   // Theme colors (you already have this)
