@@ -195,7 +195,7 @@ export default function AuthPage() {
           <div className="p-6 pt-0">
             <div className="text-center mb-4">
             <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-              You'll be redirected to Google to sign in securely
+              You&apos;ll be redirected to Google to sign in securely
             </p>
           </div>
             <button
