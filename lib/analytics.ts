@@ -208,6 +208,22 @@ export const analytics = {
       result_count: resultCount,
     });
   },
+
+  // Add to analytics.ts
+trackPerformance: (metric: string, value: number, context?: string) => {
+  trackEvent('performance_metric', {
+    metric_name: metric,
+    metric_value: value,
+    context: context,
+  });
+},
+
+trackEngagement: (engagementType: 'scroll' | 'time_on_page' | 'interaction', value: number) => {
+  trackEvent('user_engagement', {
+    engagement_type: engagementType,
+    engagement_value: value,
+  });
+},
 };
 
 // Hook for tracking page views in Next.js
@@ -218,3 +234,4 @@ export const usePageTracking = () => {
     analytics.trackPageView(path, title);
   }
 };
+
