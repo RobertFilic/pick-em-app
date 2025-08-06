@@ -1,6 +1,6 @@
 /*
 ================================================================================
-File: app/page.tsx (Enhanced with Competition Sorting and Start Dates)
+File: app/page.tsx (Updated with Analytics Tracking)
 ================================================================================
 */
 
@@ -12,7 +12,7 @@ import { analytics } from '@/lib/analytics';
 import type { User } from '@supabase/supabase-js';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Trophy, ArrowRight, Plus, Users, Trash2, Copy, X, LogOut, BarChart2, ChevronDown, Calendar } from 'lucide-react';
+import { Trophy, ArrowRight, Plus, Users, Trash2, Copy, X, LogOut, BarChart2, UserPlus, LogIn } from 'lucide-react';
 
 // --- Type Definitions ---
 
@@ -20,9 +20,6 @@ type Competition = {
     id: number;
     name: string;
     description?: string;
-    lock_date?: string;
-    created_at?: string;
-    startDate?: string; // Calculated field for display
 };
 
 type League = {
@@ -47,47 +44,28 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    console.log('🏠 HOMEPAGE: Setting up auth listener');
-    
-    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log('🏠 HOMEPAGE: Auth state change:', event, session ? `User: ${session.user.id}` : 'No session');
-      console.log('🏠 HOMEPAGE: Document visibility:', document.visibilityState);
-      console.log('🏠 HOMEPAGE: Window focus:', document.hasFocus());
-      
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
       setLoading(false);
     });
 
     const getInitialSession = async () => {
-      console.log('🏠 HOMEPAGE: Getting initial session...');
-      const { data: { session }, error } = await supabase.auth.getSession();
-      
-      if (error) {
-        console.error('🏠 HOMEPAGE: Session error:', error);
-      }
-      
-      console.log('🏠 HOMEPAGE: Initial session:', session ? `User: ${session.user.id}` : 'No session');
-      
-      if (!session) {
-        console.log('🏠 HOMEPAGE: No session, setting loading to false');
-        setLoading(false);
-      }
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+            setLoading(false);
+        }
     };
-    
     getInitialSession();
 
     return () => {
-      console.log('🏠 HOMEPAGE: Cleaning up auth listener');
       authListener.subscription.unsubscribe();
     };
-  }, [user]);
+  }, []);
 
   if (loading) {
-    console.log('🏠 HOMEPAGE: Rendering loading state');
     return <div className="min-h-screen flex items-center justify-center text-white">Loading...</div>;
   }
 
-  console.log('🏠 HOMEPAGE: Rendering dashboard with user:', user ? user.id : 'No user');
   return <UnifiedDashboard user={user} />;
 }
 
@@ -97,9 +75,6 @@ function UnifiedDashboard({ user }: { user: User | null }) {
     const [profile, setProfile] = useState<Profile | null>(null);
     const [leagues, setLeagues] = useState<League[]>([]);
     const [publicCompetitions, setPublicCompetitions] = useState<Competition[]>([]);
-    const [filteredCompetitions, setFilteredCompetitions] = useState<Competition[]>([]);
-    const [sortOrder, setSortOrder] = useState<'newest' | 'oldest'>('newest');
-    const [showSortDropdown, setShowSortDropdown] = useState(false);
     const [loading, setLoading] = useState(true);
     const [notification, setNotification] = useState<{ message: string, type: 'success' | 'error' } | null>(null);
     const router = useRouter();
@@ -107,6 +82,7 @@ function UnifiedDashboard({ user }: { user: User | null }) {
     // Modal states
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [showJoinModal, setShowJoinModal] = useState(false);
+    const [showAuthModal, setShowAuthModal] = useState(false);
 
     // Form states
     const [newLeagueName, setNewLeagueName] = useState('');
@@ -120,160 +96,56 @@ function UnifiedDashboard({ user }: { user: User | null }) {
         setTimeout(() => setNotification(null), 3000);
     };
 
-    // Format date for display
-    const formatDate = (dateString: string) => {
-        return new Date(dateString).toLocaleDateString(undefined, { 
-            year: 'numeric', 
-            month: 'long', 
-            day: 'numeric' 
-        });
-    };
-
-    // Sort competitions based on sort order
-    const sortCompetitions = useCallback((competitions: Competition[], order: 'newest' | 'oldest') => {
-        return [...competitions].sort((a, b) => {
-            const dateA = new Date(a.startDate || a.created_at || '').getTime();
-            const dateB = new Date(b.startDate || b.created_at || '').getTime();
-            
-            if (order === 'newest') {
-                return dateB - dateA; // Newest first
-            } else {
-                return dateA - dateB; // Oldest first
-            }
-        });
-    }, []);
-
     const fetchDashboardData = useCallback(async () => {
-    console.log('🏠 DASHBOARD: fetchDashboardData called with user:', user ? user.id : 'No user');
-    
-    try {
-        console.log('🏠 DASHBOARD: Fetching public competitions...');
-        // Always fetch public competitions (available to everyone)
-        const { data: competitionsData, error: competitionsError } = await supabase
-            .from('competitions')
-            .select('id, name, description, lock_date, created_at');
-        
-        if (competitionsError) {
-            console.error('🏠 DASHBOARD: Competitions fetch error:', competitionsError);
-        } else {
-            console.log('🏠 DASHBOARD: Competitions loaded:', competitionsData?.length);
+        try {
+            // Always fetch public competitions (available to everyone)
+            const { data: competitionsData } = await supabase.from('competitions').select('id, name, description');
             if (competitionsData) {
-                // Fetch first game date for each competition to use as start date
-                const competitionsWithStartDate = await Promise.all(
-                    competitionsData.map(async (comp) => {
-                        try {
-                            const { data: firstGame } = await supabase
-                                .from('games')
-                                .select('game_date')
-                                .eq('competition_id', comp.id)
-                                .order('game_date', { ascending: true })
-                                .limit(1)
-                                .single();
-                            
-                            return {
-                                ...comp,
-                                startDate: firstGame?.game_date || comp.lock_date || comp.created_at
-                            };
-                        } catch (error) {
-                            // If no games found, use lock_date or created_at
-                            console.log('No games found for competition:', comp.id, error);
-                            return {
-                                ...comp,
-                                startDate: comp.lock_date || comp.created_at
-                            };
-                        }
-                    })
-                );
-
-                setPublicCompetitions(competitionsWithStartDate);
-                
-                // Set initial sorted competitions - use current sortOrder from state
-                const currentSortOrder = sortOrder; // This will use the current value
-                const sorted = [...competitionsWithStartDate].sort((a, b) => {
-                    const dateA = new Date(a.startDate || a.created_at || '').getTime();
-                    const dateB = new Date(b.startDate || b.created_at || '').getTime();
-                    
-                    if (currentSortOrder === 'newest') {
-                        return dateB - dateA; // Newest first
-                    } else {
-                        return dateA - dateB; // Oldest first
-                    }
-                });
-                setFilteredCompetitions(sorted);
-                
-                if (competitionsWithStartDate.length > 0 && !selectedCompId && user) {
-                    setSelectedCompId(competitionsWithStartDate[0].id);
+                setPublicCompetitions(competitionsData);
+                if (competitionsData.length > 0 && !selectedCompId && user) {
+                    setSelectedCompId(competitionsData[0].id);
                 }
             }
-        }
 
-        // Only fetch user-specific data if authenticated
-        if (user) {
-            console.log('🏠 DASHBOARD: Fetching user profile...');
-            const { data: profileData, error: profileError } = await supabase.from('profiles').select('*').eq('id', user.id).single();
-            
-            if (profileError) {
-                console.error('🏠 DASHBOARD: Profile fetch error:', profileError);
-            } else {
-                console.log('🏠 DASHBOARD: Profile loaded:', profileData?.username);
+            // Only fetch user-specific data if authenticated
+            if (user) {
+                const { data: profileData } = await supabase.from('profiles').select('*').eq('id', user.id).single();
                 setProfile(profileData);
-            }
 
-            console.log('🏠 DASHBOARD: Fetching leagues...');
-            const { data: leaguesData, error: leaguesError } = await supabase
-                .from('leagues')
-                .select(`*, competitions(name), league_members(profiles(username))`)
-                .order('created_at', { ascending: false });
+                const { data: leaguesData, error: leaguesError } = await supabase
+                    .from('leagues')
+                    .select(`*, competitions(name), league_members(profiles(username))`)
+                    .order('created_at', { ascending: false });
 
-            if (leaguesError) {
-                console.error("🏠 DASHBOARD: Error fetching leagues:", leaguesError);
-                analytics.trackError('leagues_fetch', leaguesError.message, 'fetchDashboardData');
-            } else {
-                console.log('🏠 DASHBOARD: Leagues loaded:', leaguesData?.length);
-                setLeagues(leaguesData as League[]);
-                
-                // Track milestones
-                if (leaguesData.length === 1) {
-                    analytics.trackMilestone('first_league_member', 1, 'dashboard');
+                if (leaguesError) {
+                    console.error("Error fetching leagues:", leaguesError);
+                    analytics.trackError('leagues_fetch', leaguesError.message, 'fetchDashboardData');
+                } else {
+                    setLeagues(leaguesData as League[]);
+                    
+                    // Track milestones
+                    if (leaguesData.length === 1) {
+                        analytics.trackMilestone('first_league_member', 1, 'dashboard');
+                    }
                 }
             }
+            
+            setLoading(false);
+        } catch (error) {
+            console.error('Error fetching dashboard data:', error);
+            analytics.trackError('dashboard_fetch', error instanceof Error ? error.message : 'Unknown error', 'fetchDashboardData');
+            setLoading(false);
         }
-        
-        console.log('🏠 DASHBOARD: Data fetch completed');
-        setLoading(false);
-    } catch (error) {
-        console.error('🏠 DASHBOARD: Error fetching dashboard data:', error);
-        analytics.trackError('dashboard_fetch', error instanceof Error ? error.message : 'Unknown error', 'fetchDashboardData');
-        setLoading(false);
-    }
-}, []); // Remove all dependencies - the function will use current state values
-
-    // Update filtered competitions when sort order changes
-    useEffect(() => {
-        if (publicCompetitions.length > 0) {
-            const sorted = sortCompetitions(publicCompetitions, sortOrder);
-            setFilteredCompetitions(sorted);
-        }
-    }, [sortOrder, publicCompetitions, sortCompetitions]);
+    }, [user, selectedCompId]);
 
     useEffect(() => {
-        console.log('🏠 DASHBOARD: useEffect triggered with user:', user ? user.id : 'No user');
         fetchDashboardData();
         
         // Track page view
         analytics.trackPageView('/', 'Homepage');
-    }, [user]);
-
-    const handleSortChange = (newSortOrder: 'newest' | 'oldest') => {
-        setSortOrder(newSortOrder);
-        setShowSortDropdown(false);
-        
-        // Track sort usage
-        analytics.trackFeatureUsage('competition_sort', 'change', newSortOrder);
-    };
+    }, [fetchDashboardData]);
 
     const handleLogout = async () => {
-        console.log('🏠 DASHBOARD: User logging out');
         analytics.trackUserLogout();
         await supabase.auth.signOut();
         router.push('/');
@@ -281,8 +153,6 @@ function UnifiedDashboard({ user }: { user: User | null }) {
 
     const handleCreateLeague = async (e: React.FormEvent) => {
         e.preventDefault();
-        console.log('🏠 DASHBOARD: Creating league:', newLeagueName);
-        
         if (!newLeagueName || !selectedCompId || !profile) {
             setFormError("Please fill out all fields.");
             return;
@@ -305,7 +175,6 @@ function UnifiedDashboard({ user }: { user: User | null }) {
                 .single();
 
             if (leagueError) {
-                console.error('🏠 DASHBOARD: League creation error:', leagueError);
                 setFormError(leagueError.message);
                 analytics.trackError('league_creation', leagueError.message, 'handleCreateLeague');
                 setIsSubmitting(false);
@@ -317,17 +186,17 @@ function UnifiedDashboard({ user }: { user: User | null }) {
                 .insert({ league_id: leagueData.id, user_id: profile.id });
 
             if (memberError) {
-                console.error('🏠 DASHBOARD: League member add error:', memberError);
                 setFormError(memberError.message);
                 analytics.trackError('league_member_add', memberError.message, 'handleCreateLeague');
             } else {
-                console.log('🏠 DASHBOARD: League created successfully:', leagueData.id);
+                // Track successful league creation
                 analytics.trackLeagueCreated(
                     leagueData.id, 
                     Number(selectedCompId).toString(),
                     newLeagueName
                 );
                 
+                // Track milestone for first league created
                 if (leagues.length === 0) {
                     analytics.trackMilestone('first_league_created', 1, 'dashboard');
                 }
@@ -339,7 +208,6 @@ function UnifiedDashboard({ user }: { user: User | null }) {
                 showNotification("League created successfully!", 'success');
             }
         } catch (error) {
-            console.error('🏠 DASHBOARD: League creation exception:', error);
             const errorMessage = error instanceof Error ? error.message : 'Unknown error';
             analytics.trackError('league_creation_exception', errorMessage, 'handleCreateLeague');
             setFormError(errorMessage);
@@ -350,8 +218,6 @@ function UnifiedDashboard({ user }: { user: User | null }) {
 
     const handleJoinLeague = async (e: React.FormEvent) => {
         e.preventDefault();
-        console.log('🏠 DASHBOARD: Joining league with code:', joinInviteCode);
-        
         if (!joinInviteCode.trim() || !profile) {
             setFormError("Please enter an invite code.");
             return;
@@ -365,7 +231,7 @@ function UnifiedDashboard({ user }: { user: User | null }) {
             });
 
             if (error) {
-                console.error('🏠 DASHBOARD: RPC Error:', error);
+                console.error('RPC Error:', error);
                 analytics.trackError('league_join_rpc', error.message, 'handleJoinLeague');
                 setFormError("An error occurred while joining the league. Please try again.");
                 setIsSubmitting(false);
@@ -375,10 +241,9 @@ function UnifiedDashboard({ user }: { user: User | null }) {
             const result = data as { success: boolean; message: string; league_id?: string; league_name?: string };
 
             if (!result.success) {
-                console.log('🏠 DASHBOARD: League join failed:', result.message);
                 setFormError(result.message);
             } else {
-                console.log('🏠 DASHBOARD: League joined successfully:', result.league_id);
+                // Track successful league join
                 if (result.league_id && result.league_name) {
                     analytics.trackLeagueJoined(result.league_id, result.league_name, 'invite_code');
                 }
@@ -390,7 +255,7 @@ function UnifiedDashboard({ user }: { user: User | null }) {
                 showNotification(result.message, 'success');
             }
         } catch (err) {
-            console.error('🏠 DASHBOARD: Unexpected error:', err);
+            console.error('Unexpected error:', err);
             analytics.trackError('league_join_exception', err instanceof Error ? err.message : 'Unknown error', 'handleJoinLeague');
             setFormError("An unexpected error occurred. Please try again.");
         }
@@ -400,23 +265,18 @@ function UnifiedDashboard({ user }: { user: User | null }) {
     
     const handleDeleteLeague = async (e: React.MouseEvent, leagueId: string) => {
         e.stopPropagation();
-        console.log('🏠 DASHBOARD: Deleting league:', leagueId);
-        
         if (window.confirm("Are you sure you want to permanently delete this league? This cannot be undone.")) {
             try {
                 const { error } = await supabase.from('leagues').delete().eq('id', leagueId);
                 if(error) {
-                    console.error('🏠 DASHBOARD: League deletion error:', error);
                     analytics.trackError('league_deletion', error.message, 'handleDeleteLeague');
                     showNotification("Error deleting league: " + error.message, 'error');
                 } else {
-                    console.log('🏠 DASHBOARD: League deleted successfully');
                     analytics.trackLeagueDeleted(leagueId);
                     await fetchDashboardData();
                     showNotification("League deleted.", 'success');
                 }
             } catch (error) {
-                console.error('🏠 DASHBOARD: League deletion exception:', error);
                 analytics.trackError('league_deletion_exception', error instanceof Error ? error.message : 'Unknown error', 'handleDeleteLeague');
                 showNotification("Error deleting league.", 'error');
             }
@@ -425,8 +285,6 @@ function UnifiedDashboard({ user }: { user: User | null }) {
     
     const copyToClipboard = (e: React.MouseEvent, text: string, leagueId?: string, leagueName?: string) => {
         e.stopPropagation();
-        console.log('🏠 DASHBOARD: Copying invite code for league:', leagueId);
-        
         navigator.clipboard.writeText(text).then(() => {
             if (leagueId && leagueName) {
                 analytics.trackInviteCodeCopy(leagueId, leagueName);
@@ -439,8 +297,9 @@ function UnifiedDashboard({ user }: { user: User | null }) {
         });
     };
 
+
+
     const handleModalOpen = (modalType: 'create_league' | 'join_league') => {
-        console.log('🏠 DASHBOARD: Opening modal:', modalType);
         analytics.trackModalOpen(modalType);
         if (modalType === 'create_league') {
             setShowCreateModal(true);
@@ -449,10 +308,11 @@ function UnifiedDashboard({ user }: { user: User | null }) {
         }
     };
 
-    const handleModalClose = (modalType: 'create_league' | 'join_league') => {
-        console.log('🏠 DASHBOARD: Closing modal:', modalType);
+    const handleModalClose = (modalType: 'auth' | 'create_league' | 'join_league') => {
         analytics.trackModalClose(modalType);
-        if (modalType === 'create_league') {
+        if (modalType === 'auth') {
+            setShowAuthModal(false);
+        } else if (modalType === 'create_league') {
             setShowCreateModal(false);
         } else {
             setShowJoinModal(false);
@@ -460,7 +320,6 @@ function UnifiedDashboard({ user }: { user: User | null }) {
     };
 
     const handleCompetitionClick = (competition: Competition) => {
-        console.log('🏠 DASHBOARD: Competition clicked:', competition.id);
         analytics.trackCompetitionView(
             competition.id.toString(),
             competition.name,
@@ -470,22 +329,54 @@ function UnifiedDashboard({ user }: { user: User | null }) {
     };
 
     const handleLeagueClick = (league: League) => {
-        console.log('🏠 DASHBOARD: League clicked:', league.id);
         analytics.trackNavigation('homepage', `/competitions/${league.competition_id}?leagueId=${league.id}`, 'click');
     };
 
     if (loading) {
-        console.log('🏠 DASHBOARD: Rendering loading state');
         return <div className="min-h-screen flex items-center justify-center text-white">Loading...</div>;
     }
-
-    console.log('🏠 DASHBOARD: Rendering dashboard interface');
 
     return (
         <>
             {notification && (
                 <div className={`fixed top-5 right-5 p-4 rounded-lg shadow-lg z-[1001] text-white ${notification.type === 'success' ? 'bg-green-500/80' : 'bg-red-500/80'}`}>
                     {notification.message}
+                </div>
+            )}
+
+            {/* Auth Modal for Non-authenticated Users */}
+            {showAuthModal && (
+                <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-[1000]">
+                    <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-8 rounded-2xl w-full max-w-md relative">
+                        <button 
+                            onClick={() => handleModalClose('auth')}
+                            className="absolute top-4 right-4 text-gray-500 dark:text-slate-400 hover:text-black dark:hover:text-white"
+                        >
+                            <X size={24} />
+                        </button>
+                        <h2 className="text-2xl font-bold mb-4">Create Private Leagues</h2>
+                        <p className="text-gray-600 dark:text-gray-400 mb-6">
+                            Sign up or log in to create and join private leagues with your friends!
+                        </p>
+                        <div className="flex gap-3">
+                            <Link
+                                href="/login"
+                                onClick={() => analytics.trackNavigation('auth_modal', '/login', 'click')}
+                                className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                            >
+                                <UserPlus className="w-4 h-4" />
+                                Sign Up
+                            </Link>
+                            <Link
+                                href="/login"
+                                onClick={() => analytics.trackNavigation('auth_modal', '/login', 'click')}
+                                className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                            >
+                                <LogIn className="w-4 h-4" />
+                                Log In
+                            </Link>
+                        </div>
+                    </div>
                 </div>
             )}
 
@@ -499,7 +390,27 @@ function UnifiedDashboard({ user }: { user: User | null }) {
                             </button>
                         </>
                     ) : (
-                        <h1 className="text-4xl font-bold">Pick&apos;Em Competitions</h1>
+                        <>
+                            <h1 className="text-4xl font-bold">Pick&apos;Em Competitions</h1>
+                            <div className="flex gap-3">
+                                <Link
+                                    href="/login"
+                                    onClick={() => analytics.trackNavigation('homepage_header', '/login', 'click')}
+                                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors"
+                                >
+                                    <LogIn size={18} />
+                                    Log In
+                                </Link>
+                                <Link
+                                    href="/login"
+                                    onClick={() => analytics.trackNavigation('homepage_header', '/login', 'click')}
+                                    className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-full hover:bg-green-700 transition-colors"
+                                >
+                                    <UserPlus size={18} />
+                                    Sign Up
+                                </Link>
+                            </div>
+                        </>
                     )}
                 </header>
 
@@ -579,74 +490,30 @@ function UnifiedDashboard({ user }: { user: User | null }) {
                                 Create private leagues to compete with your friends, family, or coworkers. 
                                 Track rankings, share invite codes, and see who knows sports best!
                             </p>
-                            <p className="text-sm text-gray-500 dark:text-gray-400">
-                                Create an account using the login button in the top navigation bar
-                            </p>
+                            <Link
+                                href="/login"
+                                onClick={() => analytics.trackNavigation('homepage_cta', '/login', 'click')}
+                                className="px-6 py-3 bg-blue-600 text-white font-semibold rounded-full hover:bg-blue-700 transition-colors"
+                            >
+                                Sign Up to Create Leagues
+                            </Link>
                         </div>
                     </section>
                 )}
 
                 {/* Public Competitions Section - Available to Everyone */}
                 <section>
-                    <div className="flex justify-between items-center mb-6 flex-wrap gap-4">
-                        <h2 className="text-3xl font-bold flex items-center gap-3">
-                            <Trophy /> {user ? 'Public Competitions' : 'Browse Competitions'}
-                        </h2>
-                        
-                        {/* Sort Dropdown */}
-                        <div className="relative">
-                            <button
-                                onClick={() => setShowSortDropdown(!showSortDropdown)}
-                                className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-900 border border-gray-300 dark:border-slate-700 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors"
-                            >
-                                <Calendar size={18} />
-                                Sort by: {sortOrder === 'newest' ? 'Newest First' : 'Oldest First'}
-                                <ChevronDown size={18} className={`transition-transform ${showSortDropdown ? 'rotate-180' : ''}`} />
-                            </button>
-                            
-                            {showSortDropdown && (
-                                <div className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-slate-900 border border-gray-300 dark:border-slate-700 rounded-lg shadow-lg z-10">
-                                    <button
-                                        onClick={() => handleSortChange('newest')}
-                                        className={`w-full px-4 py-2 text-left hover:bg-gray-50 dark:hover:bg-slate-800 first:rounded-t-lg ${sortOrder === 'newest' ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400' : ''}`}
-                                    >
-                                        Newest First
-                                    </button>
-                                    <button
-                                        onClick={() => handleSortChange('oldest')}
-                                        className={`w-full px-4 py-2 text-left hover:bg-gray-50 dark:hover:bg-slate-800 last:rounded-b-lg ${sortOrder === 'oldest' ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400' : ''}`}
-                                    >
-                                        Oldest First
-                                    </button>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                    
-                    {/* Close dropdown when clicking outside */}
-                    {showSortDropdown && (
-                        <div 
-                            className="fixed inset-0 z-5" 
-                            onClick={() => setShowSortDropdown(false)}
-                        />
-                    )}
-
-                    {filteredCompetitions.length > 0 ? (
+                    <h2 className="text-3xl font-bold mb-6 flex items-center gap-3">
+                        <Trophy /> {user ? 'Public Competitions' : 'Browse Competitions'}
+                    </h2>
+                    {publicCompetitions.length > 0 ? (
                         <div className="space-y-4">
-                            {filteredCompetitions.map((comp) => (
+                            {publicCompetitions.map((comp) => (
                                 <Link key={comp.id} href={`/competitions/${comp.id}`} onClick={() => handleCompetitionClick(comp)} className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-gray-200 dark:border-slate-800 flex items-center justify-between hover:border-blue-500 dark:hover:border-violet-500 transition-all group">
-                                    <div className="flex-grow">
-                                        <div className="flex items-start justify-between mb-2">
-                                            <h3 className="text-xl font-semibold">{comp.name}</h3>
-                                            {comp.startDate && (
-                                                <div className="flex items-center text-sm text-gray-500 dark:text-gray-400 ml-4">
-                                                    <Calendar className="w-4 h-4 mr-1" />
-                                                    Starts: {formatDate(comp.startDate)}
-                                                </div>
-                                            )}
-                                        </div>
+                                    <div>
+                                        <h3 className="text-xl font-semibold mb-1">{comp.name}</h3>
                                         {comp.description && (
-                                            <p className="text-gray-600 dark:text-gray-400 text-sm mb-2">{comp.description}</p>
+                                            <p className="text-gray-600 dark:text-gray-400 text-sm">{comp.description}</p>
                                         )}
                                         {!user && (
                                             <p className="text-blue-600 dark:text-blue-400 text-sm mt-1">
@@ -654,7 +521,7 @@ function UnifiedDashboard({ user }: { user: User | null }) {
                                             </p>
                                         )}
                                     </div>
-                                    <ArrowRight className="w-5 h-5 text-gray-400 dark:text-slate-400 group-hover:translate-x-1 transition-transform flex-shrink-0" />
+                                    <ArrowRight className="w-5 h-5 text-gray-400 dark:text-slate-400 group-hover:translate-x-1 transition-transform" />
                                 </Link>
                             ))}
                         </div>
