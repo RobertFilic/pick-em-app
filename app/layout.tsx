@@ -82,7 +82,7 @@ export const metadata: Metadata = {
   
   // Schema.org verification (you already have this)
   verification: {
-    google: 'ID924kGiPoGLZv2L2ZlqV1kCddoPuOJdWv4qB44scqE',
+    google: 'VDx18hfyNcZCSk4yAFtOldi_8X1tZy5qhspt2a7SjTc',
   },
   
   // Theme colors (you already have this)
@@ -140,6 +140,7 @@ export default function RootLayout({ children }: RootLayoutProps) {
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
+
         {/* Google Analytics */}
         <Script
           src="https://www.googletagmanager.com/gtag/js?id=G-ERJB2P6R82"
