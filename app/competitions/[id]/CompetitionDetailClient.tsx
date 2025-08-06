@@ -277,12 +277,19 @@ export default function CompetitionDetailClient({ id }: { id: string }) {
     hasInitializedRef.current = true;
 
     const getAndSetUser = async () => {
-      const { data: { user }, error } = await supabase.auth.getUser();
-      if (error) {
-        console.error('Auth error:', error);
+      try {
+        const { data: { user }, error } = await supabase.auth.getUser();
+        if (error && error.message !== 'Auth session missing!') {
+          console.error('Auth error:', error);
+        }
+        setUserId(user?.id || null);
+        await fetchCompetitionData(user?.id || null);
+      } catch (err) {
+        // Handle other errors
+        console.error('Unexpected auth error:', err);
+        setUserId(null);
+        await fetchCompetitionData(null);
       }
-      setUserId(user?.id || null);
-      await fetchCompetitionData(user?.id || null);
     };
     getAndSetUser();
   }, [fetchCompetitionData]);
@@ -453,7 +460,7 @@ export default function CompetitionDetailClient({ id }: { id: string }) {
             </p>
             <div className="flex gap-3">
               <Link
-                href="/signup"
+                href="/login"
                 className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
               >
                 <UserPlus className="w-4 h-4" />
@@ -498,7 +505,7 @@ export default function CompetitionDetailClient({ id }: { id: string }) {
               </Link>
               {!userId && (
                 <Link
-                  href="/signup"
+                  href="/login"
                   onClick={() => {
                   trackEvent('signup_click', {
                     source: 'competition_page',
