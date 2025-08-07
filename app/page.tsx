@@ -18,16 +18,12 @@ import { useLeagues } from '@/hooks/useLeagues';
 import { useCompetitions } from '@/hooks/useCompetitions';
 
 // Import UI components
-import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
-import { Notification } from '@/components/ui/Notification';
-import { Button } from '@/components/ui/Button';
+import { LoadingSpinner, Notification, Button } from '@/components/ui';
 
-// Import feature components
-import { AuthModal } from '@/components/auth/AuthModal';
-import { LeagueCard } from '@/components/league/LeagueCard';
-import { LeagueCreateModal } from '@/components/league/LeagueCreateModal';
-import { LeagueJoinModal } from '@/components/league/LeagueJoinModal';
-import { CompetitionCard } from '@/components/competition/CompetitionCard';
+// Import feature components  
+import { AuthModal } from '@/components/auth';
+import { LeagueCard, LeagueCreateModal, LeagueJoinModal } from '@/components/league';
+import { CompetitionCard } from '@/components/competition';
 
 // Import utilities
 import { copyToClipboard } from '@/lib/utils';
