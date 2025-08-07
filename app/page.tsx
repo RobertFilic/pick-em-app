@@ -1,6 +1,6 @@
 /*
 ================================================================================
-File: app/page.tsx (Phase 2: Complete with Custom Hooks)
+File: app/page.tsx (Phase 3: Clean with UI Components)
 ================================================================================
 */
 
@@ -9,17 +9,28 @@ File: app/page.tsx (Phase 2: Complete with Custom Hooks)
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Trophy, ArrowRight, Plus, Users, Trash2, Copy, X, LogOut, BarChart2, UserPlus, LogIn } from 'lucide-react';
+import { Trophy, Plus, Users, LogOut, UserPlus, LogIn } from 'lucide-react';
 
-// Import our custom hooks
+// Import custom hooks
 import { useAuth } from '@/hooks/useAuth';
 import { useNotification } from '@/hooks/useNotification';
 import { useLeagues } from '@/hooks/useLeagues';
 import { useCompetitions } from '@/hooks/useCompetitions';
 
-// Import types and utilities
-import type { League } from '@/lib/types';
-import { copyToClipboard, isLeagueAdmin, getMemberCountText } from '@/lib/utils';
+// Import UI components
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
+import { Notification } from '@/components/ui/Notification';
+import { Button } from '@/components/ui/Button';
+
+// Import feature components
+import { AuthModal } from '@/components/auth/AuthModal';
+import { LeagueCard } from '@/components/league/LeagueCard';
+import { LeagueCreateModal } from '@/components/league/LeagueCreateModal';
+import { LeagueJoinModal } from '@/components/league/LeagueJoinModal';
+import { CompetitionCard } from '@/components/competition/CompetitionCard';
+
+// Import utilities
+import { copyToClipboard } from '@/lib/utils';
 
 // --- Main Page Component ---
 
@@ -27,11 +38,7 @@ export default function HomePage() {
   const { loading } = useAuth();
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-      </div>
-    );
+    return <LoadingSpinner fullScreen />;
   }
 
   return <UnifiedDashboard />;
@@ -54,11 +61,8 @@ function UnifiedDashboard() {
     const [showAuthModal, setShowAuthModal] = useState(false);
 
     // Form states
-    const [newLeagueName, setNewLeagueName] = useState('');
-    const [selectedCompId, setSelectedCompId] = useState<number | string>('');
-    const [joinInviteCode, setJoinInviteCode] = useState('');
-    const [formError, setFormError] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [modalError, setModalError] = useState('');
 
     // Load initial data
     useEffect(() => {
@@ -73,68 +77,48 @@ function UnifiedDashboard() {
         loadData();
     }, [user, fetchCompetitions, fetchLeagues]);
 
-    // Set default competition when competitions load
-    useEffect(() => {
-        if (competitions.length > 0 && !selectedCompId && user) {
-            setSelectedCompId(competitions[0].id);
-        }
-    }, [competitions, selectedCompId, user]);
-
-    const resetForm = () => {
-        setNewLeagueName('');
-        setJoinInviteCode('');
-        setFormError('');
-        setIsSubmitting(false);
-    };
-
     const handleLogout = async () => {
         await logout();
         router.push('/');
     };
 
-    const handleCreateLeague = async (e: React.FormEvent) => {
-        e.preventDefault();
+    const handleCreateLeague = async (name: string, competitionId: number) => {
         if (!profile) return;
 
         setIsSubmitting(true);
-        setFormError('');
+        setModalError('');
 
-        const result = await createLeague(newLeagueName, Number(selectedCompId), profile);
+        const result = await createLeague(name, competitionId, profile);
 
         if (result.success) {
             setShowCreateModal(false);
-            resetForm();
             showNotification("League created successfully!", 'success');
         } else {
-            setFormError(result.error || 'Failed to create league');
+            setModalError(result.error || 'Failed to create league');
         }
 
         setIsSubmitting(false);
     };
 
-    const handleJoinLeague = async (e: React.FormEvent) => {
-        e.preventDefault();
+    const handleJoinLeague = async (inviteCode: string) => {
         if (!profile) return;
 
         setIsSubmitting(true);
-        setFormError('');
+        setModalError('');
 
-        const result = await joinLeague(joinInviteCode);
+        const result = await joinLeague(inviteCode);
 
         if (result.success) {
             setShowJoinModal(false);
-            resetForm();
             showNotification(result.message, 'success');
         } else {
-            setFormError(result.message);
+            setModalError(result.message);
         }
 
         setIsSubmitting(false);
     };
     
-    const handleDeleteLeague = async (e: React.MouseEvent, leagueId: string) => {
-        e.stopPropagation();
-        
+    const handleDeleteLeague = async (leagueId: string) => {
         if (!window.confirm("Are you sure you want to permanently delete this league? This cannot be undone.")) {
             return;
         }
@@ -148,10 +132,8 @@ function UnifiedDashboard() {
         }
     };
     
-    const handleCopyInviteCode = async (e: React.MouseEvent, text: string) => {
-        e.stopPropagation();
-        
-        const success = await copyToClipboard(text);
+    const handleCopyInviteCode = async (code: string) => {
+        const success = await copyToClipboard(code);
         
         if (success) {
             showNotification("Invite code copied to clipboard!", 'success');
@@ -160,81 +142,49 @@ function UnifiedDashboard() {
         }
     };
 
-    const handleModalOpen = (modalType: 'create' | 'join' | 'auth') => {
-        if (modalType === 'create') {
-            setShowCreateModal(true);
-        } else if (modalType === 'join') {
-            setShowJoinModal(true);
-        } else {
-            setShowAuthModal(true);
-        }
-    };
-
     const handleModalClose = (modalType: 'create' | 'join' | 'auth') => {
         if (modalType === 'create') {
             setShowCreateModal(false);
-            resetForm();
         } else if (modalType === 'join') {
             setShowJoinModal(false);
-            resetForm();
         } else {
             setShowAuthModal(false);
         }
+        setModalError('');
+        setIsSubmitting(false);
     };
 
     if (loading) {
-        return (
-            <div className="min-h-screen flex items-center justify-center">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-            </div>
-        );
+        return <LoadingSpinner fullScreen />;
     }
 
     return (
         <>
             {/* Notification */}
-            {notification && (
-                <div className={`fixed top-5 right-5 p-4 rounded-lg shadow-lg z-[1001] text-white transition-all ${
-                    notification.type === 'success' ? 'bg-green-500/90' : 'bg-red-500/90'
-                }`}>
-                    {notification.message}
-                </div>
-            )}
+            <Notification notification={notification} />
 
-            {/* Auth Modal for Non-authenticated Users */}
-            {showAuthModal && (
-                <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-[1000]">
-                    <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-8 rounded-2xl w-full max-w-md relative">
-                        <button 
-                            onClick={() => handleModalClose('auth')}
-                            className="absolute top-4 right-4 text-gray-500 dark:text-slate-400 hover:text-black dark:hover:text-white"
-                            aria-label="Close modal"
-                        >
-                            <X size={24} />
-                        </button>
-                        <h2 className="text-2xl font-bold mb-4">Create Private Leagues</h2>
-                        <p className="text-gray-600 dark:text-gray-400 mb-6">
-                            Sign up or log in to create and join private leagues with your friends!
-                        </p>
-                        <div className="flex gap-3">
-                            <Link
-                                href="/login"
-                                className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-                            >
-                                <UserPlus className="w-4 h-4" />
-                                Sign Up
-                            </Link>
-                            <Link
-                                href="/login"
-                                className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                            >
-                                <LogIn className="w-4 h-4" />
-                                Log In
-                            </Link>
-                        </div>
-                    </div>
-                </div>
-            )}
+            {/* Modals */}
+            <AuthModal 
+                isOpen={showAuthModal} 
+                onClose={() => handleModalClose('auth')} 
+            />
+            
+            <LeagueCreateModal
+                isOpen={showCreateModal}
+                onClose={() => handleModalClose('create')}
+                onSubmit={handleCreateLeague}
+                competitions={competitions}
+                isSubmitting={isSubmitting}
+                error={modalError}
+            />
+            
+            <LeagueJoinModal
+                isOpen={showJoinModal}
+                onClose={() => handleModalClose('join')}
+                onSubmit={handleJoinLeague}
+                isSubmitting={isSubmitting}
+                error={modalError}
+            />
 
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 text-black dark:text-white">
                 {/* Header */}
@@ -242,26 +192,27 @@ function UnifiedDashboard() {
                     {user ? (
                         <>
                             <h1 className="text-4xl font-bold">Welcome, {profile?.username || 'User'}</h1>
-                            <button 
-                                onClick={handleLogout} 
-                                className="flex items-center gap-2 px-4 py-2 bg-gray-200 dark:bg-slate-800 border border-gray-300 dark:border-slate-700 text-gray-800 dark:text-slate-300 rounded-full hover:bg-gray-300 dark:hover:bg-slate-700 transition-colors"
+                            <Button 
+                                variant="secondary"
+                                onClick={handleLogout}
+                                className="rounded-full"
                             >
                                 <LogOut size={18} /> Logout
-                            </button>
+                            </Button>
                         </>
                     ) : (
                         <>
                             <h1 className="text-4xl font-bold">Pick&apos;Em Competitions</h1>
                             <div className="flex gap-3">
-                                <Link
+                                <Link 
                                     href="/login"
-                                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors"
+                                    className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white font-semibold rounded-full hover:bg-blue-700 transition-colors"
                                 >
                                     <LogIn size={18} /> Log In
                                 </Link>
-                                <Link
+                                <Link 
                                     href="/login"
-                                    className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-full hover:bg-green-700 transition-colors"
+                                    className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white font-semibold rounded-full hover:bg-green-700 transition-colors"
                                 >
                                     <UserPlus size={18} /> Sign Up
                                 </Link>
@@ -276,7 +227,7 @@ function UnifiedDashboard() {
                         <h2 className="text-2xl font-bold mb-2 text-blue-900 dark:text-blue-100">
                             🏆 Welcome to Pick&apos;Em!
                         </h2>
-                        <p className="text-blue-800 dark:text-blue-200 mb-4">
+                        <p className="text-blue-800 dark:text-blue-200">
                             Browse competitions below and start making your predictions! You can make picks as a guest, 
                             then sign up to save them and compete with friends in private leagues.
                         </p>
@@ -291,75 +242,32 @@ function UnifiedDashboard() {
                                 <Users /> My Private Leagues
                             </h2>
                             <div className="flex gap-2">
-                                <button 
-                                    onClick={() => handleModalOpen('create')} 
-                                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white font-semibold rounded-full hover:bg-blue-700 transition-colors"
+                                <Button 
+                                    onClick={() => setShowCreateModal(true)}
+                                    className="rounded-full"
                                 >
                                     <Plus size={18} /> Create League
-                                </button>
-                                <button 
-                                    onClick={() => handleModalOpen('join')} 
-                                    className="flex items-center gap-2 px-4 py-2 bg-gray-200 dark:bg-slate-800 border border-gray-300 dark:border-slate-700 text-gray-800 dark:text-slate-300 rounded-full hover:bg-gray-300 dark:hover:bg-slate-700 transition-colors"
+                                </Button>
+                                <Button 
+                                    variant="secondary"
+                                    onClick={() => setShowJoinModal(true)}
+                                    className="rounded-full"
                                 >
                                     Join League
-                                </button>
+                                </Button>
                             </div>
                         </div>
                         
                         {leagues.length > 0 ? (
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                {leagues.map((league: League) => (
-                                    <Link 
-                                        key={league.id} 
-                                        href={`/competitions/${league.competition_id}?leagueId=${league.id}`} 
-                                        className="group block bg-white dark:bg-slate-900 p-6 rounded-2xl border border-gray-200 dark:border-slate-800 hover:border-blue-500 dark:hover:border-violet-500 transition-all"
-                                    >
-                                        <div className="flex flex-col h-full">
-                                            <div className="flex-grow">
-                                                <h3 className="text-xl font-bold text-blue-600 dark:text-violet-400 mb-1">
-                                                    {league.name}
-                                                </h3>
-                                                <p className="text-gray-600 dark:text-slate-400 mb-4 text-sm">
-                                                    Competition: {league.competitions?.name || 'N/A'}
-                                                </p>
-                                                <div className="flex items-center gap-2 text-sm bg-gray-100 dark:bg-slate-800 p-2 rounded-lg">
-                                                    <span className="text-gray-500 dark:text-slate-400">Invite Code:</span>
-                                                    <strong className="text-gray-800 dark:text-white">{league.invite_code}</strong>
-                                                    <button 
-                                                        onClick={(e) => handleCopyInviteCode(e, league.invite_code)}
-                                                        className="ml-auto p-1 text-gray-500 dark:text-slate-400 hover:text-black dark:hover:text-white"
-                                                        aria-label="Copy invite code"
-                                                    >
-                                                        <Copy size={16} />
-                                                    </button>
-                                                </div>
-                                            </div>
-                                            <div className="flex justify-between items-center mt-4 pt-4 border-t border-gray-200 dark:border-slate-800">
-                                                <span className="text-gray-500 dark:text-slate-400 text-sm flex items-center gap-2">
-                                                    <Users size={16} /> {getMemberCountText(league.league_members.length)}
-                                                </span>
-                                                <div className="flex items-center gap-2">
-                                                    <Link 
-                                                        href={`/leagues/${league.id}/leaderboard`} 
-                                                        onClick={(e) => e.stopPropagation()}
-                                                        className="p-2 text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-full" 
-                                                        title="View League Leaderboard"
-                                                    >
-                                                        <BarChart2 size={16} />
-                                                    </Link>
-                                                    {profile && isLeagueAdmin(profile.id, league) && (
-                                                        <button 
-                                                            onClick={(e) => handleDeleteLeague(e, league.id)}
-                                                            className="p-2 text-red-500 hover:bg-red-500/10 rounded-full" 
-                                                            title="Delete League"
-                                                        >
-                                                            <Trash2 size={16} />
-                                                        </button>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </Link>
+                                {leagues.map(league => (
+                                    <LeagueCard
+                                        key={league.id}
+                                        league={league}
+                                        profile={profile}
+                                        onCopyInviteCode={handleCopyInviteCode}
+                                        onDeleteLeague={handleDeleteLeague}
+                                    />
                                 ))}
                             </div>
                         ) : (
@@ -382,12 +290,13 @@ function UnifiedDashboard() {
                                 Create private leagues to compete with your friends, family, or coworkers. 
                                 Track rankings, share invite codes, and see who knows sports best!
                             </p>
-                            <button
-                                onClick={() => handleModalOpen('auth')}
-                                className="px-6 py-3 bg-blue-600 text-white font-semibold rounded-full hover:bg-blue-700 transition-colors"
+                            <Button
+                                onClick={() => setShowAuthModal(true)}
+                                size="lg"
+                                className="rounded-full"
                             >
                                 Sign Up to Create Leagues
-                            </button>
+                            </Button>
                         </div>
                     </section>
                 )}
@@ -397,136 +306,25 @@ function UnifiedDashboard() {
                     <h2 className="text-3xl font-bold mb-6 flex items-center gap-3">
                         <Trophy /> {user ? 'Public Competitions' : 'Browse Competitions'}
                     </h2>
+                    
                     {competitions.length > 0 ? (
                         <div className="space-y-4">
-                            {competitions.map((comp) => (
-                                <Link 
-                                    key={comp.id} 
-                                    href={`/competitions/${comp.id}`}
-                                    className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-gray-200 dark:border-slate-800 flex items-center justify-between hover:border-blue-500 dark:hover:border-violet-500 transition-all group"
-                                >
-                                    <div>
-                                        <h3 className="text-xl font-semibold mb-1">{comp.name}</h3>
-                                        {comp.description && (
-                                            <p className="text-gray-600 dark:text-gray-400 text-sm">{comp.description}</p>
-                                        )}
-                                        {!user && (
-                                            <p className="text-blue-600 dark:text-blue-400 text-sm mt-1">
-                                                👆 Click to start making predictions
-                                            </p>
-                                        )}
-                                    </div>
-                                    <ArrowRight className="w-5 h-5 text-gray-400 dark:text-slate-400 group-hover:translate-x-1 transition-transform" />
-                                </Link>
+                            {competitions.map((competition) => (
+                                <CompetitionCard
+                                    key={competition.id}
+                                    competition={competition}
+                                    showGuestMessage={!user}
+                                />
                             ))}
                         </div>
                     ) : (
                         <div className="text-center py-10 bg-white dark:bg-slate-900 rounded-2xl border border-gray-200 dark:border-slate-800">
-                            <p className="text-gray-500 dark:text-slate-400">No competitions available right now.</p>
+                            <p className="text-gray-500 dark:text-slate-400">
+                                No competitions available right now.
+                            </p>
                         </div>
                     )}
                 </section>
-
-                {/* League Creation Modal */}
-                {showCreateModal && (
-                    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-[1000]">
-                        <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-8 rounded-2xl w-full max-w-md relative">
-                            <button 
-                                onClick={() => handleModalClose('create')} 
-                                className="absolute top-4 right-4 text-gray-500 dark:text-slate-400 hover:text-black dark:hover:text-white"
-                                aria-label="Close modal"
-                            >
-                                <X size={24} />
-                            </button>
-                            <h2 className="text-2xl font-bold mb-6">Create a New League</h2>
-                            <form onSubmit={handleCreateLeague} className="space-y-4">
-                                <div>
-                                    <label htmlFor="leagueName" className="block mb-1 text-gray-600 dark:text-slate-400">
-                                        League Name
-                                    </label>
-                                    <input 
-                                        id="leagueName" 
-                                        type="text" 
-                                        value={newLeagueName} 
-                                        onChange={e => setNewLeagueName(e.target.value)} 
-                                        className="w-full p-2 bg-gray-100 dark:bg-slate-800 border border-gray-300 dark:border-slate-700 rounded-lg" 
-                                        placeholder="e.g., The Office Champions"
-                                        required 
-                                    />
-                                </div>
-                                <div>
-                                    <label htmlFor="competition" className="block mb-1 text-gray-600 dark:text-slate-400">
-                                        Link to Competition
-                                    </label>
-                                    <select 
-                                        id="competition" 
-                                        value={selectedCompId || ''} 
-                                        onChange={e => setSelectedCompId(Number(e.target.value))} 
-                                        className="w-full p-2 bg-gray-100 dark:bg-slate-800 border border-gray-300 dark:border-slate-700 rounded-lg"
-                                        required
-                                    >
-                                        <option value="">Select a competition</option>
-                                        {competitions.map(comp => (
-                                            <option key={comp.id} value={comp.id}>{comp.name}</option>
-                                        ))}
-                                    </select>
-                                </div>
-                                {formError && (
-                                    <p className="text-red-500 text-sm" role="alert">{formError}</p>
-                                )}
-                                <button 
-                                    type="submit" 
-                                    className="w-full py-3 bg-blue-600 text-white font-semibold rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-blue-700 transition-colors" 
-                                    disabled={isSubmitting}
-                                >
-                                    {isSubmitting ? 'Creating...' : 'Create League'}
-                                </button>
-                            </form>
-                        </div>
-                    </div>
-                )}
-
-                {/* Join League Modal */}
-                {showJoinModal && (
-                     <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-[1000]">
-                        <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 p-8 rounded-2xl w-full max-w-md relative">
-                            <button 
-                                onClick={() => handleModalClose('join')} 
-                                className="absolute top-4 right-4 text-gray-500 dark:text-slate-400 hover:text-black dark:hover:text-white"
-                                aria-label="Close modal"
-                            >
-                                <X size={24} />
-                            </button>
-                            <h2 className="text-2xl font-bold mb-6">Join a League</h2>
-                            <form onSubmit={handleJoinLeague} className="space-y-4">
-                                <div>
-                                    <label htmlFor="inviteCode" className="block mb-1 text-gray-600 dark:text-slate-400">
-                                        Invite Code
-                                    </label>
-                                    <input 
-                                        id="inviteCode" 
-                                        type="text" 
-                                        value={joinInviteCode} 
-                                        onChange={e => setJoinInviteCode(e.target.value)} 
-                                        className="w-full p-2 bg-gray-100 dark:bg-slate-800 border border-gray-300 dark:border-slate-700 rounded-lg" 
-                                        placeholder="Enter code from a friend"
-                                        required 
-                                    />
-                                </div>
-                                {formError && (
-                                    <p className="text-red-500 text-sm" role="alert">{formError}</p>
-                                )}
-                                <button 
-                                    type="submit" 
-                                    className="w-full py-3 bg-blue-600 text-white font-semibold rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-blue-700 transition-colors" 
-                                    disabled={isSubmitting}
-                                >
-                                    {isSubmitting ? 'Joining...' : 'Join League'}
-                                </button>
-                            </form>
-                        </div>
-                    </div>
-                )}
             </div>
         </>
     );
