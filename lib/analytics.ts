@@ -1,23 +1,28 @@
 // lib/analytics.ts
 
-// Declare gtag function type
+// Declare gtag function type - UPDATED to include consent
 declare global {
   interface Window {
     gtag: (
-      command: 'config' | 'event' | 'js' | 'set',
-      targetId: string | Date,
+      command: 'config' | 'event' | 'js' | 'set' | 'consent',
+      targetId: string | Date | 'default' | 'update',
       config?: Record<string, unknown>
     ) => void;
+    dataLayer: unknown[];
   }
 }
 
-// Generic event tracking function
+// Generic event tracking function with error handling
 export const trackEvent = (
   eventName: string,
   parameters?: Record<string, unknown>
 ) => {
   if (typeof window !== 'undefined' && window.gtag) {
-    window.gtag('event', eventName, parameters);
+    try {
+      window.gtag('event', eventName, parameters);
+    } catch (error) {
+      console.error('GA tracking error:', error);
+    }
   }
 };
 
@@ -209,21 +214,21 @@ export const analytics = {
     });
   },
 
-  // Add to analytics.ts
-trackPerformance: (metric: string, value: number, context?: string) => {
-  trackEvent('performance_metric', {
-    metric_name: metric,
-    metric_value: value,
-    context: context,
-  });
-},
+  // Performance tracking
+  trackPerformance: (metric: string, value: number, context?: string) => {
+    trackEvent('performance_metric', {
+      metric_name: metric,
+      metric_value: value,
+      context: context,
+    });
+  },
 
-trackEngagement: (engagementType: 'scroll' | 'time_on_page' | 'interaction', value: number) => {
-  trackEvent('user_engagement', {
-    engagement_type: engagementType,
-    engagement_value: value,
-  });
-},
+  trackEngagement: (engagementType: 'scroll' | 'time_on_page' | 'interaction', value: number) => {
+    trackEvent('user_engagement', {
+      engagement_type: engagementType,
+      engagement_value: value,
+    });
+  },
 };
 
 // Hook for tracking page views in Next.js
@@ -234,4 +239,3 @@ export const usePageTracking = () => {
     analytics.trackPageView(path, title);
   }
 };
-

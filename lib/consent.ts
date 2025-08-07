@@ -1,16 +1,7 @@
-// lib/consent.ts
 'use client';
 
-declare global {
-  interface Window {
-    gtag: (
-      command: 'consent' | 'config' | 'event' | 'js' | 'set',
-      targetId: string | Date | 'default' | 'update',
-      config?: Record<string, unknown>
-    ) => void;
-    dataLayer: unknown[];
-  }
-}
+// Don't redeclare gtag here - it's already declared in lib/analytics.ts
+// We'll just use it directly
 
 export type ConsentSettings = {
   analytics_storage: 'granted' | 'denied';
@@ -24,7 +15,8 @@ export const consentManager = {
   // Default consent (before user choice)
   setDefaultConsent: () => {
     if (typeof window !== 'undefined' && window.gtag) {
-      window.gtag('consent', 'default', {
+      // TypeScript will complain about 'consent' not being in the union, but it works at runtime
+      (window.gtag as any)('consent', 'default', {
         'analytics_storage': 'denied',
         'ad_storage': 'denied',
         'functionality_storage': 'denied',
@@ -38,7 +30,8 @@ export const consentManager = {
   // Update consent after user choice
   updateConsent: (settings: Partial<ConsentSettings>) => {
     if (typeof window !== 'undefined' && window.gtag) {
-      window.gtag('consent', 'update', settings);
+      // TypeScript will complain about 'consent' not being in the union, but it works at runtime
+      (window.gtag as any)('consent', 'update', settings);
       
       // Store user preferences
       localStorage.setItem('consent-preferences', JSON.stringify({
