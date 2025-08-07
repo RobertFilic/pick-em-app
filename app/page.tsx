@@ -24,7 +24,7 @@ import { copyToClipboard, isLeagueAdmin, getMemberCountText } from '@/lib/utils'
 // --- Main Page Component ---
 
 export default function HomePage() {
-  const { user, loading } = useAuth();
+  const { loading } = useAuth();
 
   if (loading) {
     return (
