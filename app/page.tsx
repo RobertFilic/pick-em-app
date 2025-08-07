@@ -138,7 +138,7 @@ function UnifiedDashboard({ user }: { user: User | null }) {
                 setLeagues(leaguesData as League[]);
             }
             
-        } catch (error) {
+        } catch (_error) {
             showNotification('Failed to load data. Please try again.', 'error');
         } finally {
             setLoading(false);
@@ -267,7 +267,7 @@ function UnifiedDashboard({ user }: { user: User | null }) {
 
             await fetchDashboardData();
             showNotification("League deleted successfully.", 'success');
-        } catch (err) {
+        } catch (_err) {
             showNotification("Error deleting league.", 'error');
         }
     };
