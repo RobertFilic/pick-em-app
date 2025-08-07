@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Inter, Plus_Jakarta_Sans } from 'next/font/google';
 import './globals.css';
 import Header from '@/components/Header';
+import ConsentBanner from '@/components/ConsentBanner';
 import Script from 'next/script';
 
 // Load fonts with CSS variable support
@@ -49,7 +50,7 @@ export const metadata: Metadata = {
     locale: 'en_US',
     images: [
       {
-        url: '/og-image.jpg', // You'll need to add this image to your public folder
+        url: '/og-image.jpg',
         width: 1200,
         height: 630,
         alt: 'PlayPredix - Sports Prediction Competitions',
@@ -80,12 +81,12 @@ export const metadata: Metadata = {
     },
   },
   
-  // Schema.org verification (you already have this)
+  // Schema.org verification
   verification: {
     google: 'vRXsLqBqTwdlK2XX4QD-_gC6VYh1syxpmXwhJrzvjJE',
   },
   
-  // Theme colors (you already have this)
+  // Theme colors
   themeColor: [
     { media: '(prefers-color-scheme: light)', color: '#ffffff' },
     { media: '(prefers-color-scheme: dark)', color: '#0a0a0a' },
@@ -100,8 +101,6 @@ export const metadata: Metadata = {
     canonical: 'https://www.playpredix.com',
   },
 };
-
-//////////////////////////// Metadata ////////////////////////////
 
 interface RootLayoutProps {
   children: React.ReactNode;
@@ -126,40 +125,82 @@ export default function RootLayout({ children }: RootLayoutProps) {
       '@type': 'Organization',
       name: 'PlayPredix',
     },
-
-    // Features
-      featureList: [
-        'Create private leagues with friends',
-        'Make sports predictions',
-        'Real-time leaderboards',
-        'Multiple competition types',
-        'Free to play'
-      ],    
+    featureList: [
+      'Create private leagues with friends',
+      'Make sports predictions',
+      'Real-time leaderboards',
+      'Multiple competition types',
+      'Free to play'
+    ],    
   };
 
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-
-        {/* Google Analytics */}
+        {/* Google Analytics with Consent Management */}
         <Script
-          src="https://www.googletagmanager.com/gtag/js?id=G-ERJB2P6R82"
+          src={`https://www.googletagmanager.com/gtag/js?id=${process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID}`}
           strategy="afterInteractive"
         />
         <Script id="google-analytics" strategy="afterInteractive">
           {`
             window.dataLayer = window.dataLayer || [];
             function gtag(){dataLayer.push(arguments);}
+            
+            // Set default consent BEFORE GA initialization
+            gtag('consent', 'default', {
+              'analytics_storage': 'denied',
+              'ad_storage': 'denied',
+              'functionality_storage': 'denied', 
+              'personalization_storage': 'denied',
+              'security_storage': 'granted',
+              'wait_for_update': 500,
+              'region': ['US', 'GB', 'EU']  // Apply to these regions
+            });
+            
+            // Initialize GA
             gtag('js', new Date());
             gtag('config', '${process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID}', {
-            page_title: document.title,
-            page_location: window.location.href,
-            debug_mode: process.env.NODE_ENV === 'development',
-}); 
+              page_title: document.title,
+              page_location: window.location.href,
+              // Don't send page_view until consent is granted
+              send_page_view: false,
+              debug_mode: ${process.env.NODE_ENV === 'development'},
+              // Enhanced measurement features
+              enhanced_measurement: {
+                scrolls: true,
+                outbound_clicks: true,
+                site_search: false,
+                video_engagement: false,
+                file_downloads: true
+              }
+            });
+          `}
+        </Script>
+
+        {/* Privacy-first initialization script */}
+        <Script id="consent-init" strategy="afterInteractive">
+          {`
+            // Import and initialize consent manager
+            import('/lib/consent.js').then(({ consentManager }) => {
+              consentManager.setDefaultConsent();
+              
+              // If user has stored consent, apply it immediately  
+              if (consentManager.hasStoredConsent()) {
+                const stored = consentManager.loadStoredConsent();
+                if (stored && stored.analytics_storage === 'granted') {
+                  // Send the initial page view if analytics is granted
+                  gtag('event', 'page_view', {
+                    page_title: document.title,
+                    page_location: window.location.href
+                  });
+                }
+              }
             });
           `}
         </Script>
       </head>
+      
       <body
         className={`
           ${plusJakartaSans.variable} 
@@ -200,6 +241,9 @@ export default function RootLayout({ children }: RootLayoutProps) {
           </div>
           <div className="h-16 sm:h-24" />
         </main>
+
+        {/* Consent Banner - Always render, shows/hides based on consent status */}
+        <ConsentBanner />
 
         {/* Accessibility Skip Link */}
         <div className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[100] focus:px-4 focus:py-2 focus:bg-violet-600 focus:text-white focus:rounded-lg focus:shadow-lg">
