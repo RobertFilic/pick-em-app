@@ -1,28 +1,47 @@
 // lib/analytics.ts
 
-// Declare gtag function type - UPDATED to include consent
+// Comprehensive gtag interface that covers all use cases
+interface GtagFunction {
+  // Standard commands
+  (command: 'config', targetId: string, config?: Record<string, unknown>): void;
+  (command: 'event', eventName: string, parameters?: Record<string, unknown>): void;
+  (command: 'js', date: Date): void;
+  (command: 'set', config: Record<string, unknown>): void;
+  
+  // Consent commands
+  (command: 'consent', action: 'default' | 'update', parameters: Record<string, unknown>): void;
+}
+
+// Declare gtag function type globally
 declare global {
   interface Window {
-    gtag: (
-      command: 'config' | 'event' | 'js' | 'set' | 'consent',
-      targetId: string | Date | 'default' | 'update',
-      config?: Record<string, unknown>
-    ) => void;
-    dataLayer: unknown[];
+    gtag: GtagFunction;
+    dataLayer: Array<Record<string, unknown>>;
   }
 }
 
-// Generic event tracking function with error handling
+// Type guard to check if gtag exists and is function
+const isGtagAvailable = (): boolean => {
+  return typeof window !== 'undefined' && 
+         typeof window.gtag === 'function';
+};
+
+// Generic event tracking function with comprehensive error handling
 export const trackEvent = (
   eventName: string,
   parameters?: Record<string, unknown>
 ) => {
-  if (typeof window !== 'undefined' && window.gtag) {
-    try {
-      window.gtag('event', eventName, parameters);
-    } catch (error) {
-      console.error('GA tracking error:', error);
+  if (!isGtagAvailable()) {
+    if (process.env.NODE_ENV === 'development') {
+      console.warn('GA not available:', { eventName, parameters });
     }
+    return;
+  }
+
+  try {
+    window.gtag('event', eventName, parameters);
+  } catch (error) {
+    console.error('GA tracking error:', error, { eventName, parameters });
   }
 };
 
@@ -227,6 +246,13 @@ export const analytics = {
     trackEvent('user_engagement', {
       engagement_type: engagementType,
       engagement_value: value,
+    });
+  },
+
+  // Consent-related tracking
+  trackConsentGiven: (consentType: 'accept_all' | 'reject_all' | 'essential_only' | 'custom') => {
+    trackEvent('consent_update', {
+      consent_type: consentType,
     });
   },
 };

@@ -1,7 +1,9 @@
 'use client';
 
-// Don't redeclare gtag here - it's already declared in lib/analytics.ts
-// We'll just use it directly
+// Create a type-safe interface for gtag with consent commands
+interface GtagConsentFunction {
+  (command: 'consent', action: 'default' | 'update', parameters: Record<string, unknown>): void;
+}
 
 export type ConsentSettings = {
   analytics_storage: 'granted' | 'denied';
@@ -11,12 +13,17 @@ export type ConsentSettings = {
   security_storage: 'granted' | 'denied';
 };
 
+// Type guard to check if gtag supports consent
+const isGtagWithConsent = (gtag: unknown): gtag is GtagConsentFunction => {
+  return typeof gtag === 'function';
+};
+
 export const consentManager = {
   // Default consent (before user choice)
   setDefaultConsent: () => {
-    if (typeof window !== 'undefined' && window.gtag) {
-      // TypeScript will complain about 'consent' not being in the union, but it works at runtime
-      (window.gtag as any)('consent', 'default', {
+    if (typeof window !== 'undefined' && window.gtag && isGtagWithConsent(window.gtag)) {
+      const gtagConsent = window.gtag as GtagConsentFunction;
+      gtagConsent('consent', 'default', {
         'analytics_storage': 'denied',
         'ad_storage': 'denied',
         'functionality_storage': 'denied',
@@ -29,15 +36,24 @@ export const consentManager = {
 
   // Update consent after user choice
   updateConsent: (settings: Partial<ConsentSettings>) => {
-    if (typeof window !== 'undefined' && window.gtag) {
-      // TypeScript will complain about 'consent' not being in the union, but it works at runtime
-      (window.gtag as any)('consent', 'update', settings);
+    if (typeof window !== 'undefined' && window.gtag && isGtagWithConsent(window.gtag)) {
+      const gtagConsent = window.gtag as GtagConsentFunction;
+      gtagConsent('consent', 'update', settings);
       
       // Store user preferences
       localStorage.setItem('consent-preferences', JSON.stringify({
         ...settings,
         timestamp: Date.now(),
       }));
+      
+      // Send a page view if analytics consent is granted
+      if (settings.analytics_storage === 'granted') {
+        // Use the regular gtag for events
+        window.gtag('event', 'page_view', {
+          page_title: document.title,
+          page_location: window.location.href,
+        });
+      }
     }
   },
 
@@ -48,7 +64,7 @@ export const consentManager = {
     if (!stored) return false;
     
     try {
-      const parsed = JSON.parse(stored);
+      const parsed = JSON.parse(stored) as { timestamp: number };
       // Check if consent is less than 1 year old
       return Date.now() - parsed.timestamp < 365 * 24 * 60 * 60 * 1000;
     } catch {
@@ -63,8 +79,10 @@ export const consentManager = {
     if (!stored) return null;
     
     try {
-      const parsed = JSON.parse(stored);
-      return parsed;
+      const parsed = JSON.parse(stored) as Partial<ConsentSettings> & { timestamp: number };
+      // Remove timestamp before returning
+      const { timestamp, ...consentSettings } = parsed;
+      return consentSettings;
     } catch {
       return null;
     }
