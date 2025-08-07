@@ -81,7 +81,7 @@ export const consentManager = {
     try {
       const parsed = JSON.parse(stored) as Partial<ConsentSettings> & { timestamp: number };
       // Remove timestamp before returning
-      const { timestamp, ...consentSettings } = parsed;
+      const { timestamp: _, ...consentSettings } = parsed;
       return consentSettings;
     } catch {
       return null;
