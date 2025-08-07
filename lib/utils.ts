@@ -75,7 +75,7 @@ export function formatErrorMessage(error: unknown): string {
 /**
  * Debounce function to limit function calls
  */
-export function debounce<T extends (...args: any[]) => any>(
+export function debounce<T extends (...args: unknown[]) => unknown>(
   func: T,
   delay: number
 ): (...args: Parameters<T>) => void {

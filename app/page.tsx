@@ -267,7 +267,7 @@ function UnifiedDashboard({ user }: { user: User | null }) {
 
             await fetchDashboardData();
             showNotification("League deleted successfully.", 'success');
-        } catch (error) {
+        } catch (err) {
             showNotification("Error deleting league.", 'error');
         }
     };

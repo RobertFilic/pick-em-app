@@ -87,6 +87,9 @@ export interface LeagueCardProps extends BaseComponentProps {
 
 export interface CompetitionCardProps extends BaseComponentProps {
     competition: Competition;
-    user: any; // User type from Supabase
+    user: User | null; // User type from Supabase
     onClick?: () => void;
 }
+
+// Import User type from Supabase
+import type { User } from '@supabase/supabase-js';
