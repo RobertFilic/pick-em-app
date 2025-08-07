@@ -1,67 +1,30 @@
 /*
 ================================================================================
-File: app/page.tsx (Phase 1: Complete & Clean)
+File: app/page.tsx (Phase 2: Complete with Custom Hooks)
 ================================================================================
 */
 
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
-import { supabase } from '@/lib/supabaseClient';
-import type { User } from '@supabase/supabase-js';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Trophy, ArrowRight, Plus, Users, Trash2, Copy, X, LogOut, BarChart2, UserPlus, LogIn } from 'lucide-react';
 
-// Import our new types and utilities
-import type {
-    Competition,
-    League,
-    Profile,
-    NotificationState,
-    LeagueJoinResponse
-} from '@/lib/types';
-import {
-    generateInviteCode,
-    validateLeagueName,
-    validateInviteCode,
-    formatErrorMessage,
-    copyToClipboard,
-    isLeagueAdmin,
-    getMemberCountText
-} from '@/lib/utils';
+// Import our custom hooks
+import { useAuth } from '@/hooks/useAuth';
+import { useNotification } from '@/hooks/useNotification';
+import { useLeagues } from '@/hooks/useLeagues';
+import { useCompetitions } from '@/hooks/useCompetitions';
+
+// Import types and utilities
+import type { League } from '@/lib/types';
+import { copyToClipboard, isLeagueAdmin, getMemberCountText } from '@/lib/utils';
 
 // --- Main Page Component ---
 
 export default function HomePage() {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    let mounted = true;
-
-    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (mounted) {
-        setUser(session?.user ?? null);
-        setLoading(false);
-      }
-    });
-
-    const getInitialSession = async () => {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (mounted) {
-          setUser(session?.user ?? null);
-          setLoading(false);
-        }
-    };
-    
-    getInitialSession();
-
-    return () => {
-      mounted = false;
-      authListener.subscription.unsubscribe();
-    };
-  }, []);
+  const { user, loading } = useAuth();
 
   if (loading) {
     return (
@@ -71,17 +34,18 @@ export default function HomePage() {
     );
   }
 
-  return <UnifiedDashboard user={user} />;
+  return <UnifiedDashboard />;
 }
 
 // --- The Unified Dashboard for All Users ---
 
-function UnifiedDashboard({ user }: { user: User | null }) {
-    const [profile, setProfile] = useState<Profile | null>(null);
-    const [leagues, setLeagues] = useState<League[]>([]);
-    const [publicCompetitions, setPublicCompetitions] = useState<Competition[]>([]);
+function UnifiedDashboard() {
+    const { user, profile, logout } = useAuth();
+    const { notification, showNotification } = useNotification();
+    const { leagues, fetchLeagues, createLeague, joinLeague, deleteLeague } = useLeagues();
+    const { competitions, fetchCompetitions } = useCompetitions();
+    
     const [loading, setLoading] = useState(true);
-    const [notification, setNotification] = useState<NotificationState>(null);
     const router = useRouter();
 
     // Modal states
@@ -96,68 +60,35 @@ function UnifiedDashboard({ user }: { user: User | null }) {
     const [formError, setFormError] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    const showNotification = useCallback((message: string, type: 'success' | 'error') => {
-        setNotification({ message, type });
-        setTimeout(() => setNotification(null), 3000);
-    }, []);
-
-    const fetchDashboardData = useCallback(async () => {
-        try {
-            // Always fetch public competitions (available to everyone)
-            const { data: competitionsData, error: competitionsError } = await supabase
-                .from('competitions')
-                .select('id, name, description')
-                .order('name');
-
-            if (competitionsError) throw competitionsError;
-            
-            if (competitionsData) {
-                setPublicCompetitions(competitionsData);
-                if (competitionsData.length > 0 && !selectedCompId && user) {
-                    setSelectedCompId(competitionsData[0].id);
-                }
-            }
-
-            // Only fetch user-specific data if authenticated
-            if (user) {
-                const { data: profileData, error: profileError } = await supabase
-                    .from('profiles')
-                    .select('*')
-                    .eq('id', user.id)
-                    .single();
-
-                if (profileError) throw profileError;
-                setProfile(profileData);
-
-                const { data: leaguesData, error: leaguesError } = await supabase
-                    .from('leagues')
-                    .select(`*, competitions(name), league_members(profiles(username))`)
-                    .order('created_at', { ascending: false });
-
-                if (leaguesError) throw leaguesError;
-                setLeagues(leaguesData as League[]);
-            }
-            
-        } catch {
-            showNotification('Failed to load data. Please try again.', 'error');
-        } finally {
-            setLoading(false);
-        }
-    }, [user, selectedCompId, showNotification]);
-
+    // Load initial data
     useEffect(() => {
-        fetchDashboardData();
-    }, [fetchDashboardData]);
+        const loadData = async () => {
+            await fetchCompetitions();
+            if (user) {
+                await fetchLeagues();
+            }
+            setLoading(false);
+        };
 
-    const resetForm = useCallback(() => {
+        loadData();
+    }, [user, fetchCompetitions, fetchLeagues]);
+
+    // Set default competition when competitions load
+    useEffect(() => {
+        if (competitions.length > 0 && !selectedCompId && user) {
+            setSelectedCompId(competitions[0].id);
+        }
+    }, [competitions, selectedCompId, user]);
+
+    const resetForm = () => {
         setNewLeagueName('');
         setJoinInviteCode('');
         setFormError('');
         setIsSubmitting(false);
-    }, []);
+    };
 
     const handleLogout = async () => {
-        await supabase.auth.signOut();
+        await logout();
         router.push('/');
     };
 
@@ -165,93 +96,40 @@ function UnifiedDashboard({ user }: { user: User | null }) {
         e.preventDefault();
         if (!profile) return;
 
-        // Validate form data using our utility functions
-        const nameError = validateLeagueName(newLeagueName);
-        if (nameError) {
-            setFormError(nameError);
-            return;
-        }
-
-        if (!selectedCompId) {
-            setFormError("Please select a competition.");
-            return;
-        }
-
         setIsSubmitting(true);
         setFormError('');
 
-        try {
-            const inviteCode = generateInviteCode();
+        const result = await createLeague(newLeagueName, Number(selectedCompId), profile);
 
-            const { data: leagueData, error: leagueError } = await supabase
-                .from('leagues')
-                .insert({
-                    name: newLeagueName.trim(),
-                    admin_id: profile.id,
-                    competition_id: Number(selectedCompId),
-                    invite_code: inviteCode
-                })
-                .select()
-                .single();
-
-            if (leagueError) throw leagueError;
-
-            const { error: memberError } = await supabase
-                .from('league_members')
-                .insert({ league_id: leagueData.id, user_id: profile.id });
-
-            if (memberError) throw memberError;
-
+        if (result.success) {
             setShowCreateModal(false);
             resetForm();
-            await fetchDashboardData();
             showNotification("League created successfully!", 'success');
-
-        } catch (error) {
-            setFormError(formatErrorMessage(error));
-        } finally {
-            setIsSubmitting(false);
+        } else {
+            setFormError(result.error || 'Failed to create league');
         }
+
+        setIsSubmitting(false);
     };
 
     const handleJoinLeague = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!profile) return;
 
-        // Validate invite code using our utility function
-        const codeError = validateInviteCode(joinInviteCode);
-        if (codeError) {
-            setFormError(codeError);
-            return;
-        }
-
         setIsSubmitting(true);
         setFormError('');
 
-        try {
-            const { data, error } = await supabase.rpc('join_league', {
-                invite_code_to_join: joinInviteCode.trim()
-            });
+        const result = await joinLeague(joinInviteCode);
 
-            if (error) throw error;
-
-            const result = data as LeagueJoinResponse;
-
-            if (!result.success) {
-                setFormError(result.message);
-                return;
-            }
-
+        if (result.success) {
             setShowJoinModal(false);
             resetForm();
-            await fetchDashboardData();
             showNotification(result.message, 'success');
-
-        } catch (error) {
-            setFormError(formatErrorMessage(error));
-        } finally {
-            setIsSubmitting(false);
+        } else {
+            setFormError(result.message);
         }
+
+        setIsSubmitting(false);
     };
     
     const handleDeleteLeague = async (e: React.MouseEvent, leagueId: string) => {
@@ -261,14 +139,12 @@ function UnifiedDashboard({ user }: { user: User | null }) {
             return;
         }
 
-        try {
-            const { error } = await supabase.from('leagues').delete().eq('id', leagueId);
-            if (error) throw error;
+        const result = await deleteLeague(leagueId);
 
-            await fetchDashboardData();
+        if (result.success) {
             showNotification("League deleted successfully.", 'success');
-        } catch {
-            showNotification("Error deleting league.", 'error');
+        } else {
+            showNotification(result.error || "Error deleting league.", 'error');
         }
     };
     
@@ -432,7 +308,7 @@ function UnifiedDashboard({ user }: { user: User | null }) {
                         
                         {leagues.length > 0 ? (
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                {leagues.map(league => (
+                                {leagues.map((league: League) => (
                                     <Link 
                                         key={league.id} 
                                         href={`/competitions/${league.competition_id}?leagueId=${league.id}`} 
@@ -521,9 +397,9 @@ function UnifiedDashboard({ user }: { user: User | null }) {
                     <h2 className="text-3xl font-bold mb-6 flex items-center gap-3">
                         <Trophy /> {user ? 'Public Competitions' : 'Browse Competitions'}
                     </h2>
-                    {publicCompetitions.length > 0 ? (
+                    {competitions.length > 0 ? (
                         <div className="space-y-4">
-                            {publicCompetitions.map((comp) => (
+                            {competitions.map((comp) => (
                                 <Link 
                                     key={comp.id} 
                                     href={`/competitions/${comp.id}`}
@@ -590,7 +466,7 @@ function UnifiedDashboard({ user }: { user: User | null }) {
                                         required
                                     >
                                         <option value="">Select a competition</option>
-                                        {publicCompetitions.map(comp => (
+                                        {competitions.map(comp => (
                                             <option key={comp.id} value={comp.id}>{comp.name}</option>
                                         ))}
                                     </select>
