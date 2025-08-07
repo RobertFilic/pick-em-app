@@ -80,9 +80,14 @@ export const consentManager = {
     
     try {
       const parsed = JSON.parse(stored) as Partial<ConsentSettings> & { timestamp: number };
-      // Remove timestamp before returning
-      const { timestamp: _, ...consentSettings } = parsed;
-      return consentSettings;
+      // Remove timestamp and return only consent settings
+      const result: Partial<ConsentSettings> = {};
+      if (parsed.analytics_storage) result.analytics_storage = parsed.analytics_storage;
+      if (parsed.ad_storage) result.ad_storage = parsed.ad_storage;
+      if (parsed.functionality_storage) result.functionality_storage = parsed.functionality_storage;
+      if (parsed.personalization_storage) result.personalization_storage = parsed.personalization_storage;
+      if (parsed.security_storage) result.security_storage = parsed.security_storage;
+      return result;
     } catch {
       return null;
     }
