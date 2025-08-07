@@ -21,7 +21,6 @@ interface CompetitionHeaderProps {
   competition: Competition;
   league?: League | null;
   userId?: string | null;
-  picksCount: number;
   leaderboardUrl: string;
   onSignupClick?: () => void;
   className?: string;
@@ -31,7 +30,6 @@ export function CompetitionHeader({
   competition,
   league,
   userId,
-  picksCount,
   leaderboardUrl,
   onSignupClick,
   className = ''

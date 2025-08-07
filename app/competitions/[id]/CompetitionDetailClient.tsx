@@ -110,7 +110,6 @@ export default function CompetitionDetailClient({ id }: { id: string }) {
           competition={competition}
           league={league}
           userId={userId}
-          picksCount={picksCount}
           leaderboardUrl={leaderboardUrl}
           onSignupClick={handleSignupClick}
         />
