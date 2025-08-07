@@ -139,7 +139,7 @@ export default function RootLayout({ children }: RootLayoutProps) {
       <head>
         {/* Google Analytics with Consent Management */}
         <Script
-          src={`https://www.googletagmanager.com/gtag/js?id=${process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID}`}
+          src={`https://www.googletagmanager.com/gtag/js?id=${process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || 'G-ERJB2P6R82'}`}
           strategy="afterInteractive"
         />
         <Script id="google-analytics" strategy="afterInteractive">
@@ -155,46 +155,22 @@ export default function RootLayout({ children }: RootLayoutProps) {
               'personalization_storage': 'denied',
               'security_storage': 'granted',
               'wait_for_update': 500,
-              'region': ['US', 'GB', 'EU']  // Apply to these regions
+              'region': ['US', 'GB', 'EU']
             });
             
             // Initialize GA
             gtag('js', new Date());
-            gtag('config', '${process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID}', {
+            gtag('config', '${process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || 'G-ERJB2P6R82'}', {
               page_title: document.title,
               page_location: window.location.href,
-              // Don't send page_view until consent is granted
               send_page_view: false,
               debug_mode: ${process.env.NODE_ENV === 'development'},
-              // Enhanced measurement features
               enhanced_measurement: {
                 scrolls: true,
                 outbound_clicks: true,
                 site_search: false,
                 video_engagement: false,
                 file_downloads: true
-              }
-            });
-          `}
-        </Script>
-
-        {/* Privacy-first initialization script */}
-        <Script id="consent-init" strategy="afterInteractive">
-          {`
-            // Import and initialize consent manager
-            import('/lib/consent.js').then(({ consentManager }) => {
-              consentManager.setDefaultConsent();
-              
-              // If user has stored consent, apply it immediately  
-              if (consentManager.hasStoredConsent()) {
-                const stored = consentManager.loadStoredConsent();
-                if (stored && stored.analytics_storage === 'granted') {
-                  // Send the initial page view if analytics is granted
-                  gtag('event', 'page_view', {
-                    page_title: document.title,
-                    page_location: window.location.href
-                  });
-                }
               }
             });
           `}
