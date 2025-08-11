@@ -184,7 +184,7 @@ export default function PrivateLeagueLeaderboardClientPage({ leagueId }: { leagu
         // Process game picks
         if (gamePicksRes.data) {
           gamePicksRes.data.forEach((pick) => {
-            const game = pick.games;
+            const game = Array.isArray(pick.games) ? pick.games[0] : pick.games;
             if (game) {
               // Handle draw games
               if (game.is_draw && pick.pick === 'draw') {
@@ -201,7 +201,8 @@ export default function PrivateLeagueLeaderboardClientPage({ leagueId }: { leagu
         // Process prop picks
         if (propPicksRes.data) {
           propPicksRes.data.forEach((pick) => {
-            const correctAnswer = pick.prop_predictions?.correct_answer;
+            const propPrediction = Array.isArray(pick.prop_predictions) ? pick.prop_predictions[0] : pick.prop_predictions;
+            const correctAnswer = propPrediction?.correct_answer;
             if (correctAnswer && pick.pick === correctAnswer) {
               correct++;
             } else if (correctAnswer) {
