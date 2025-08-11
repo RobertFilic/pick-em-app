@@ -32,12 +32,6 @@ type LeagueMemberData = {
   } | null;
 };
 
-type UserPick = {
-  pick: string;
-  prop_predictions: {
-    correct_answer: string;
-  }[];
-};
 
 // This component receives the leagueId as a string (UUID)
 export default function PrivateLeagueLeaderboardClientPage({ leagueId }: { leagueId: string }) {
@@ -144,16 +138,35 @@ export default function PrivateLeagueLeaderboardClientPage({ leagueId }: { leagu
         
         console.log(`Processing member ${member.user_id}, username: ${username}`);
         
-        // Get user picks for this competition
-        const { data: picks, error: picksError } = await supabase
-          .from('user_picks')
-          .select('pick, prop_predictions!inner(correct_answer)')
-          .eq('user_id', member.user_id)
-          .eq('competition_id', leagueData.competition_id)
-          .not('prop_predictions.correct_answer', 'is', null);
+        // Get user picks for this competition - both game picks and prop picks
+        const [gamePicksRes, propPicksRes] = await Promise.all([
+          // Game picks
+          supabase
+            .from('user_picks')
+            .select(`
+              pick,
+              games!inner(winning_team_id, is_draw)
+            `)
+            .eq('user_id', member.user_id)
+            .eq('competition_id', leagueData.competition_id)
+            .not('game_id', 'is', null)
+            .not('games.winning_team_id', 'is', null),
+          
+          // Prop prediction picks
+          supabase
+            .from('user_picks')
+            .select(`
+              pick,
+              prop_predictions!inner(correct_answer)
+            `)
+            .eq('user_id', member.user_id)
+            .eq('competition_id', leagueData.competition_id)
+            .not('prop_prediction_id', 'is', null)
+            .not('prop_predictions.correct_answer', 'is', null)
+        ]);
 
-        if (picksError) {
-          console.error('Error fetching picks for user:', member.user_id, picksError);
+        if (gamePicksRes.error || propPicksRes.error) {
+          console.error('Error fetching picks for user:', member.user_id, gamePicksRes.error, propPicksRes.error);
           return {
             user_id: member.user_id,
             username: username,
@@ -168,13 +181,27 @@ export default function PrivateLeagueLeaderboardClientPage({ leagueId }: { leagu
         let correct = 0;
         let incorrect = 0;
         
-        // Cast picks to our expected type
-        const typedPicks = picks as UserPick[] | null;
+        // Process game picks
+        if (gamePicksRes.data) {
+          gamePicksRes.data.forEach((pick) => {
+            const game = pick.games;
+            if (game) {
+              // Handle draw games
+              if (game.is_draw && pick.pick === 'draw') {
+                correct++;
+              } else if (!game.is_draw && pick.pick === game.winning_team_id?.toString()) {
+                correct++;
+              } else {
+                incorrect++;
+              }
+            }
+          });
+        }
         
-        if (typedPicks) {
-          typedPicks.forEach((pick: UserPick) => {
-            // prop_predictions is an array, so take the first element
-            const correctAnswer = pick.prop_predictions?.[0]?.correct_answer;
+        // Process prop picks
+        if (propPicksRes.data) {
+          propPicksRes.data.forEach((pick) => {
+            const correctAnswer = pick.prop_predictions?.correct_answer;
             if (correctAnswer && pick.pick === correctAnswer) {
               correct++;
             } else if (correctAnswer) {
