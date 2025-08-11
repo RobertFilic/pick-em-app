@@ -51,9 +51,13 @@ export default function LeagueManageClientPage({ leagueId }: { leagueId: string 
 
       if (leagueError) throw leagueError;
 
+      const competition = Array.isArray(leagueData.competitions) 
+        ? leagueData.competitions[0] 
+        : leagueData.competitions;
+      
       const leagueWithCompetition: LeagueInfo = {
         ...leagueData,
-        competition_name: leagueData.competitions?.name || 'Competition'
+        competition_name: competition?.name || 'Competition'
       };
       setLeagueInfo(leagueWithCompetition);
 
@@ -74,11 +78,14 @@ export default function LeagueManageClientPage({ leagueId }: { leagueId: string 
 
       if (membersError) throw membersError;
 
-      const formattedMembers: LeagueMember[] = membersData.map((member) => ({
-        user_id: member.user_id,
-        username: member.profiles?.username || 'Unknown User',
-        is_admin: member.user_id === leagueData.admin_id
-      }));
+      const formattedMembers: LeagueMember[] = membersData.map((member) => {
+        const profile = Array.isArray(member.profiles) ? member.profiles[0] : member.profiles;
+        return {
+          user_id: member.user_id,
+          username: profile?.username || 'Unknown User',
+          is_admin: member.user_id === leagueData.admin_id
+        };
+      });
 
       setMembers(formattedMembers);
 
